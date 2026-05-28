@@ -160,10 +160,6 @@ async def get_latest_summary(db: AsyncSession = Depends(get_db)) -> ExecutiveSum
             total_incidents_active=0,
         )
 
-            total_revenue_at_risk_daily=Decimal("0.00"),
-            total_incidents_active=0,
-        )
-
     # Generate one automatically
     payload = ExecutiveSummaryRequest(incident_ids=[inc.id for inc in incidents])
     _latest_summary = await generate_executive_summary(payload, db)
