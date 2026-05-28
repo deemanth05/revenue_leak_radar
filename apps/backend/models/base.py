@@ -37,3 +37,8 @@ class TimestampedModel(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
+        default=uuid.UUID("e8b8c8d8-e8b8-40a2-b168-74a41beee348"),
+    )

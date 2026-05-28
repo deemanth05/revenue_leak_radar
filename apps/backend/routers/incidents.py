@@ -9,6 +9,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -372,4 +373,66 @@ async def get_incident_timeline(
     # Sort chronologically
     timeline_events.sort(key=lambda x: x.timestamp)
     return timeline_events
+
+
+# In-memory incident comments store for collaboration
+_INCIDENT_COMMENTS: dict[uuid.UUID, list[dict]] = {}
+
+class CommentCreate(BaseModel):
+    author: str
+    content: str
+
+@router.get("/{incident_id}/comments", summary="Get incident triage comments")
+async def get_incident_comments(incident_id: uuid.UUID) -> list[dict]:
+    """Retrieve SRE collaborative triage comments."""
+    return _INCIDENT_COMMENTS.get(incident_id, [])
+
+@router.post("/{incident_id}/comments", summary="Add incident triage comment")
+async def add_incident_comment(incident_id: uuid.UUID, payload: CommentCreate) -> dict:
+    """Post collaborative triage comment to active bridge."""
+    comment = {
+        "id": str(uuid.uuid4()),
+        "author": payload.author,
+        "content": payload.content,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    if incident_id not in _INCIDENT_COMMENTS:
+        _INCIDENT_COMMENTS[incident_id] = []
+    _INCIDENT_COMMENTS[incident_id].append(comment)
+    return comment
+
+@router.get("/{incident_id}/postmortem", summary="Generate SRE Markdown Postmortem")
+async def get_incident_postmortem(
+    incident_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db)
+) -> dict[str, str]:
+    """Generate structured Post-Mortem SRE report for SRE reviews."""
+    incident = await _get_incident_or_404(incident_id, db)
+    timeline = await get_incident_timeline(incident_id, db)
+    
+    # Render postmortem markdown
+    md = f"""# SRE Incident Post-Mortem: {incident.title}
+
+## Executive Summary
+- **Incident ID**: {incident.id}
+- **Status**: {incident.status.upper()}
+- **Severity**: {incident.severity.upper()}
+- **Exposure Duration**: {incident.started_at.isoformat()} to {incident.resolved_at.isoformat() if incident.resolved_at else "Active"}
+
+## Business & Financial Impact
+- **Peak Revenue Risk**: ${incident.estimated_revenue_impact_daily}/day MRR
+- **Affected Customers**: {incident.affected_customer_count} B2B SaaS accounts
+- **Correlation Confidence**: {incident.correlation_confidence * 100:.0f}%
+
+## Timeline of Events
+"""
+    for event in timeline:
+        md += f"- **{event.timestamp.strftime('%H:%M:%S')}** [{event.type.upper()}] {event.title} — {event.message}\n"
+        
+    md += "\n## Remediation Actions Taken\n"
+    for action in incident.remediation_actions:
+        md += f"- [{ 'x' if action.status == 'completed' else ' ' }] **{action.title}** ({action.action_type}): {action.description}\n"
+        
+    return {"postmortem_md": md}
+
 

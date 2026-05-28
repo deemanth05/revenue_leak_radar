@@ -41,6 +41,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await init_db()
     logger.info("Database tables verified/created")
 
+    # Start event stream background processor
+    from services.event_stream import start_event_stream_processor
+    start_event_stream_processor()
+
     # Share startup time with health router
     from routers.health import set_start_time
     set_start_time(_startup_time)
@@ -48,6 +52,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     logger.info("Shutting down Revenue Leak Radar API")
+    from services.event_stream import stop_event_stream_processor
+    await stop_event_stream_processor()
     await engine.dispose()
 
 
@@ -76,6 +82,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from core.observability import ObservabilityMiddleware
+app.add_middleware(ObservabilityMiddleware)
 
 
 # ── Exception handlers ─────────────────────────────────────────────────────────
@@ -112,6 +121,8 @@ from routers.executive_summaries import router as executive_router
 from routers.remediation import router as remediation_router
 from routers.timeline import router as timeline_router
 from routers.simulations import router as simulations_router
+from routers.auth import router as auth_router
+from routers.integrations import router as integrations_router
 
 # Health lives at root level (/health)
 app.include_router(health_router)
@@ -126,6 +137,8 @@ app.include_router(executive_router, prefix=API_PREFIX)
 app.include_router(remediation_router, prefix=API_PREFIX)
 app.include_router(timeline_router, prefix=API_PREFIX)
 app.include_router(simulations_router, prefix=API_PREFIX)
+app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(integrations_router, prefix=API_PREFIX)
 
 
 

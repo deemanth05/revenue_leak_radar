@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   transpilePackages: ['@rlr/schemas'],
   experimental: {
     optimizePackageImports: ['lucide-react', 'recharts'],

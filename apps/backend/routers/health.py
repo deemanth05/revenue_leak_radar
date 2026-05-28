@@ -43,3 +43,11 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> HealthResponse:
         version=settings.VERSION,
         uptime_seconds=round(time.time() - _start_time, 2),
     )
+
+
+@router.get("/metrics", summary="Prometheus scraper metrics endpoint")
+async def prometheus_metrics() -> Response:
+    """Return in-memory SRE request counts and durations."""
+    from fastapi import Response
+    from core.observability import get_prometheus_metrics
+    return Response(content=get_prometheus_metrics(), media_type="text/plain")
