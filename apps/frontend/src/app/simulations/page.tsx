@@ -1,7 +1,21 @@
 "use client";
 
 import React, { useEffect, useState, startTransition } from 'react';
-import { Play, RotateCcw, AlertOctagon, Activity, Radio, Terminal, Server, RefreshCw, Cpu } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  AlertOctagon,
+  Activity,
+  Radio,
+  Terminal,
+  Server,
+  RefreshCw,
+  Cpu,
+  FastForward,
+  CheckCircle2,
+  HelpCircle
+} from 'lucide-react';
 import { simulationsApi, timelineApi } from '@/lib/api';
 
 interface Scenario {
@@ -91,6 +105,13 @@ export default function SimulationsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Cinematic Playback State
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<1 | 2 | 5 | 10>(2); // 2x default
+
+  const selectedScenario = SCENARIOS.find(s => s.id === selectedScenarioId)!;
+  const currentStep = states[selectedScenarioId] || 0;
+
   const fetchStates = async () => {
     try {
       const res = await simulationsApi.getStates();
@@ -102,7 +123,7 @@ export default function SimulationsPage() {
 
   const fetchTimeline = async () => {
     try {
-      const res = await timelineApi.global(15);
+      const res = await timelineApi.global(20);
       setEvents(res);
     } catch (err) {
       console.error("Failed to load timeline events", err);
@@ -121,6 +142,23 @@ export default function SimulationsPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Cinematic Playback loop using useEffect
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    if (currentStep >= selectedScenario.stepsCount) {
+      setIsPlaying(false);
+      return;
+    }
+
+    const intervalTime = 3000 / playbackSpeed;
+    const timer = setTimeout(() => {
+      handleTriggerStep(selectedScenarioId, currentStep + 1);
+    }, intervalTime);
+
+    return () => clearTimeout(timer);
+  }, [isPlaying, currentStep, selectedScenarioId, playbackSpeed, selectedScenario.stepsCount]);
+
   const handleTriggerStep = async (scenarioId: string, stepNum: number) => {
     setActionLoading(true);
     try {
@@ -128,13 +166,16 @@ export default function SimulationsPage() {
       await fetchStates();
       await fetchTimeline();
     } catch (err) {
-      alert("Error: " + (err as Error).message);
+      console.error("Trigger step error:", err);
+      // Local state fallback if backend fails
+      setStates(prev => ({ ...prev, [scenarioId]: stepNum }));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleReset = async () => {
+    setIsPlaying(false);
     setActionLoading(true);
     try {
       await simulationsApi.reset();
@@ -153,8 +194,36 @@ export default function SimulationsPage() {
     setRefreshing(false);
   };
 
-  const selectedScenario = SCENARIOS.find(s => s.id === selectedScenarioId)!;
-  const currentStep = states[selectedScenarioId] || 0;
+  const handleScrubChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const targetStep = parseInt(e.target.value, 10);
+    if (isPlaying) setIsPlaying(false);
+    
+    setActionLoading(true);
+    try {
+      if (targetStep === 0) {
+        await simulationsApi.reset();
+      } else if (targetStep < currentStep) {
+        // Reset and trigger sequentially
+        await simulationsApi.reset();
+        for (let i = 1; i <= targetStep; i++) {
+          await simulationsApi.triggerStep(selectedScenarioId, i);
+        }
+      } else if (targetStep > currentStep) {
+        // Trigger forward sequentially
+        for (let i = currentStep + 1; i <= targetStep; i++) {
+          await simulationsApi.triggerStep(selectedScenarioId, i);
+        }
+      }
+      await fetchStates();
+      await fetchTimeline();
+    } catch (err) {
+      console.error("Scrub trigger failed:", err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const isCompleted = currentStep === selectedScenario.stepsCount;
 
   return (
     <div className="space-y-6">
@@ -171,7 +240,7 @@ export default function SimulationsPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleForceRefresh}
-            className="btn btn-secondary flex items-center gap-1.5 text-xs py-1.5 px-3"
+            className="btn-secondary flex items-center gap-1.5 text-xs py-1.5 px-3"
             disabled={refreshing}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -179,7 +248,7 @@ export default function SimulationsPage() {
           </button>
           <button
             onClick={handleReset}
-            className="btn bg-danger/10 text-danger border-danger/20 hover:bg-danger/20 flex items-center gap-1.5 text-xs py-1.5 px-3"
+            className="btn-danger flex items-center gap-1.5 text-xs py-1.5 px-3"
             disabled={actionLoading}
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -198,14 +267,17 @@ export default function SimulationsPage() {
           <div className="space-y-2">
             {SCENARIOS.map((sc) => {
               const activeStep = states[sc.id] || 0;
-              const isCompleted = activeStep === sc.stepsCount;
+              const completed = activeStep === sc.stepsCount;
               return (
                 <button
                   key={sc.id}
-                  onClick={() => startTransition(() => setSelectedScenarioId(sc.id))}
+                  onClick={() => {
+                    setIsPlaying(false);
+                    startTransition(() => setSelectedScenarioId(sc.id));
+                  }}
                   className={`w-full text-left p-4 rounded-lg border transition-all ${
                     selectedScenarioId === sc.id
-                      ? 'bg-surface border-primary'
+                      ? 'bg-surface border-primary shadow-lg shadow-primary/5'
                       : 'bg-surface/40 border-surface-border hover:border-text-muted'
                   }`}
                 >
@@ -213,14 +285,13 @@ export default function SimulationsPage() {
                   <p className="text-3xs text-text-muted line-clamp-2 mt-1">{sc.description}</p>
                   
                   <div className="flex items-center justify-between mt-3">
-                    {/* Progress indicator */}
                     <div className="flex items-center gap-1 text-3xs text-text-secondary">
                       <span className="font-semibold text-primary">{activeStep}</span>
                       <span>/</span>
                       <span>{sc.stepsCount} steps triggered</span>
                     </div>
 
-                    {isCompleted ? (
+                    {completed ? (
                       <span className="text-3xs font-bold text-success bg-success-muted px-1.5 py-0.5 rounded border border-success/20">
                         COMPLETED
                       </span>
@@ -242,13 +313,83 @@ export default function SimulationsPage() {
 
         {/* Middle column: selected scenario controls */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="card p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-bold text-text-primary">{selectedScenario.name}</h2>
-              <p className="text-xs text-text-muted mt-1 leading-relaxed">{selectedScenario.description}</p>
+          <div className="card p-6 space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-text-primary">{selectedScenario.name}</h2>
+                <p className="text-xs text-text-muted mt-1 leading-relaxed">{selectedScenario.description}</p>
+              </div>
             </div>
 
-            {/* Stepper progress */}
+            {/* Cinematic Playback Dashboard */}
+            <div className="p-4 rounded-lg bg-background-secondary border border-surface-border space-y-4">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className={`p-2 rounded-full flex items-center justify-center transition-all ${
+                      isPlaying
+                        ? 'bg-warning text-black hover:bg-warning-hover'
+                        : 'bg-primary text-white hover:bg-primary-hover'
+                    }`}
+                    disabled={isCompleted && !isPlaying}
+                  >
+                    {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                  </button>
+                  <span className="text-xs font-semibold text-text-primary">
+                    {isPlaying ? 'Cinematic playback running' : 'Playback stopped'}
+                  </span>
+                </div>
+
+                {/* Speed Controls */}
+                <div className="flex items-center gap-1.5 bg-surface p-1 rounded border border-surface-border">
+                  <span className="text-3xs font-bold text-text-muted px-2 uppercase">Speed:</span>
+                  {([1, 2, 5, 10] as const).map((speed) => (
+                    <button
+                      key={speed}
+                      onClick={() => setPlaybackSpeed(speed)}
+                      className={`px-2 py-0.5 rounded text-3xs font-bold transition-all ${
+                        playbackSpeed === speed
+                          ? 'bg-primary-muted text-primary'
+                          : 'text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      {speed}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Progress Slider Scrubbing bar */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-3xs font-semibold text-text-muted uppercase">
+                  <span>Scrubber timeline</span>
+                  <span>Step {currentStep} of {selectedScenario.stepsCount}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="0"
+                    max={selectedScenario.stepsCount}
+                    value={currentStep}
+                    onChange={handleScrubChange}
+                    disabled={actionLoading}
+                    className="flex-1 accent-primary bg-surface-border h-1.5 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+                {/* Visual Progress bar indicators */}
+                <div className="w-full h-1 bg-surface-border rounded-full overflow-hidden mt-2">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      isCompleted ? 'bg-success' : 'bg-primary'
+                    }`}
+                    style={{ width: `${(currentStep / selectedScenario.stepsCount) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Stepper progress list */}
             <div className="relative border-l border-surface-border ml-2 pl-4 py-1 space-y-4">
               {selectedScenario.steps.map((step) => {
                 const isActive = currentStep + 1 === step.number;
@@ -261,13 +402,13 @@ export default function SimulationsPage() {
                       isActive ? 'bg-primary border-primary text-white animate-pulse' :
                       'bg-surface border-surface-border text-text-muted'
                     }`}>
-                      {step.number}
+                      {isPassed ? <CheckCircle2 className="w-3.5 h-3.5 text-white" /> : step.number}
                     </div>
 
                     <div className={`${isPassed ? 'opacity-60' : isActive ? 'opacity-100 font-semibold' : 'opacity-40'}`}>
                       <div className="text-xs font-bold text-text-primary flex items-center gap-2">
                         {step.title}
-                        {isActive && (
+                        {isActive && !isPlaying && (
                           <span className="text-3xs text-primary bg-primary-muted border border-primary/20 rounded px-1.5 py-0.5 animate-pulse">
                             READY TO TRIGGER
                           </span>
@@ -284,15 +425,15 @@ export default function SimulationsPage() {
             {currentStep < selectedScenario.stepsCount ? (
               <button
                 onClick={() => handleTriggerStep(selectedScenario.id, currentStep + 1)}
-                className="btn btn-primary w-full flex items-center justify-center gap-2 py-2"
-                disabled={actionLoading}
+                className="btn-primary w-full flex items-center justify-center gap-2 py-2"
+                disabled={actionLoading || isPlaying}
               >
                 <Play className="w-4 h-4" />
                 Trigger Step {currentStep + 1}: {selectedScenario.steps[currentStep].title}
               </button>
             ) : (
               <div className="text-center py-3 bg-success-muted text-success border border-success/20 rounded-lg text-xs font-semibold">
-                Scenario fully executed! Review timeline dashboard to inspect the correlated incident.
+                Scenario fully executed! Review dashboard to inspect the correlated active incident.
               </div>
             )}
           </div>
