@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, startTransition } from 'react';
-import { GitCommit, AlertTriangle, CreditCard, MessageSquare, CheckCircle, Zap, Loader2, ArrowRight } from 'lucide-react';
+import { GitCommit, AlertTriangle, CreditCard, MessageSquare, CheckCircle, Zap, Loader2, TrendingDown } from 'lucide-react';
 import { incidentsApi } from '@/lib/api';
-import { formatRevenue, formatDateTime } from '@/lib/utils';
+import { formatRevenue, formatDateTime, formatRelativeTime } from '@/lib/utils';
 import type { Incident } from '@rlr/schemas';
 
 type EventType = 'deployment' | 'alert' | 'payment_failure' | 'support_ticket' | 'remediation' | 'executive_alert';
@@ -16,6 +16,8 @@ interface TimelineEvent {
   message: string;
   metadata?: Record<string, any>;
 }
+
+type Phase = 'pre_incident' | 'incident_active' | 'escalation' | 'remediation';
 
 const ICONS: Record<string, React.ReactNode> = {
   deployment: <GitCommit className="w-3.5 h-3.5" />,
@@ -33,6 +35,22 @@ const ICON_COLORS: Record<string, string> = {
   support_ticket: 'bg-warning-muted border-warning/30 text-warning',
   remediation: 'bg-success-muted border-success/30 text-success',
   executive_alert: 'bg-revenue-muted border-revenue/30 text-revenue',
+};
+
+// Phase assignment based on index in timeline
+function getPhase(index: number, total: number): Phase {
+  const pct = index / total;
+  if (pct < 0.15) return 'pre_incident';
+  if (pct < 0.55) return 'incident_active';
+  if (pct < 0.80) return 'escalation';
+  return 'remediation';
+}
+
+const PHASE_LABELS: Record<Phase, { label: string; color: string }> = {
+  pre_incident: { label: 'Pre-Incident', color: 'text-text-muted' },
+  incident_active: { label: 'Incident Active', color: 'text-danger' },
+  escalation: { label: 'Escalation', color: 'text-warning' },
+  remediation: { label: 'Remediation', color: 'text-success' },
 };
 
 const MOCK_TIMELINE: TimelineEvent[] = [
@@ -110,6 +128,13 @@ const MOCK_TIMELINE: TimelineEvent[] = [
   },
 ];
 
+// Revenue accumulator per event index (simulate increasing cost)
+function getAccumulatedRevenue(eventIndex: number): number {
+  const rate = 42000 / 24 / 60; // $42k/day → per minute
+  const minutesAgo = (MOCK_TIMELINE.length - 1 - eventIndex) * 5;
+  return Math.round(rate * minutesAgo);
+}
+
 export default function TimelinePage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -160,38 +185,47 @@ export default function TimelinePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        <span className="ml-3 text-text-secondary text-sm">Loading correlation intelligence...</span>
+      <div className="flex items-center justify-center min-h-[400px] gap-3">
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        <span className="text-text-secondary text-sm">Loading correlation intelligence...</span>
       </div>
     );
   }
 
   const selectedIncident = incidents.find(i => i.id === selectedId);
+  const total = timeline.length;
+
+  // Build phases for section dividers
+  let lastPhase: Phase | null = null;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Incident Timeline</h1>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Incident Timeline</h1>
           <p className="text-sm text-text-muted mt-1">
-            Root cause timeline — sequenced by technical anomaly & revenue impact
+            Root cause timeline — sequenced by technical anomaly &amp; revenue impact
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-text-muted">
-          <span className="live-indicator">Live feed</span>
-          {isMock && <span className="text-warning font-semibold">(DEMO MODE)</span>}
+        <div className="flex items-center gap-3">
+          <span className="live-indicator text-xs">Live feed</span>
+          {isMock && <span className="tag-warning text-xs font-semibold px-2 py-1">DEMO MODE</span>}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left list of incidents */}
+        {/* Left: Incident list */}
         <div className="lg:col-span-1 space-y-3">
-          <h2 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Active Incidents</h2>
+          <h2 className="section-header px-1">Active Incidents</h2>
           {isMock ? (
-            <div className="p-3 rounded bg-surface border border-danger/30">
-              <div className="text-xs font-bold text-text-primary">Checkout Service Failure</div>
-              <div className="text-2xs text-danger mt-1 font-semibold">$42,000/day Risk</div>
+            <div className="card-critical p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="status-dot-active" />
+                <div className="text-xs font-bold text-text-primary">Checkout Service Failure</div>
+              </div>
+              <div className="text-sm font-bold text-danger tabular-nums">$42,000/day Risk</div>
+              <div className="text-2xs text-text-muted mt-1">94% correlation confidence</div>
             </div>
           ) : (
             <div className="space-y-2">
@@ -201,11 +235,20 @@ export default function TimelinePage() {
                   onClick={() => startTransition(() => setSelectedId(inc.id))}
                   className={`w-full text-left p-3 rounded transition-all border ${
                     selectedId === inc.id
-                      ? 'bg-surface border-primary'
+                      ? inc.severity === 'critical'
+                        ? 'bg-danger-muted/30 border-danger/40'
+                        : 'bg-surface border-primary'
                       : 'bg-surface/50 border-surface-border hover:border-text-muted'
                   }`}
                 >
-                  <div className="text-xs font-bold text-text-primary line-clamp-2">{inc.title}</div>
+                  <div className="flex items-start gap-2">
+                    <span className={`status-dot mt-1 flex-shrink-0 ${
+                      inc.status === 'active' ? 'status-dot-active' :
+                      inc.status === 'investigating' ? 'status-dot-investigating' :
+                      'status-dot-resolved'
+                    }`} />
+                    <div className="text-xs font-bold text-text-primary line-clamp-2 flex-1">{inc.title}</div>
+                  </div>
                   <div className="flex items-center justify-between mt-2">
                     <span className={`text-3xs px-1.5 py-0.5 rounded font-mono uppercase font-bold ${
                       inc.severity === 'critical' ? 'bg-danger-muted text-danger border border-danger/20' :
@@ -214,7 +257,7 @@ export default function TimelinePage() {
                     }`}>
                       {inc.severity}
                     </span>
-                    <span className="text-2xs font-bold text-danger">
+                    <span className="text-xs font-bold text-danger tabular-nums">
                       ${Number(inc.estimated_revenue_impact_daily).toLocaleString()}/d
                     </span>
                   </div>
@@ -224,27 +267,36 @@ export default function TimelinePage() {
           )}
         </div>
 
-        {/* Right timeline details */}
+        {/* Right: Timeline */}
         <div className="lg:col-span-3 space-y-4">
+          {/* Incident summary */}
           {selectedIncident && (
-            <div className="p-4 rounded-lg bg-surface border border-surface-border">
+            <div className="card p-4 animate-fade-in">
               <h3 className="text-sm font-bold text-text-primary">{selectedIncident.title}</h3>
               <p className="text-xs text-text-secondary mt-1">{selectedIncident.description}</p>
-              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-surface-border text-xs text-text-muted">
+              <div className="flex items-center gap-6 mt-3 pt-3 border-t border-surface-border text-xs text-text-muted flex-wrap gap-y-2">
                 <div>
-                  Started: <span className="text-text-primary font-mono">{formatDateTime(selectedIncident.started_at)}</span>
+                  Started: <span className="text-text-primary font-mono tabular-nums">
+                    {formatDateTime(selectedIncident.started_at)}
+                  </span>
                 </div>
                 <div>
-                  Impact: <span className="text-danger font-bold">${Number(selectedIncident.estimated_revenue_impact_daily).toLocaleString()}/day</span>
+                  Impact:{' '}
+                  <span className="text-danger font-bold tabular-nums">
+                    ${Number(selectedIncident.estimated_revenue_impact_daily).toLocaleString()}/day
+                  </span>
                 </div>
                 <div>
-                  Correlation Confidence: <span className="text-primary font-bold">{Math.round(selectedIncident.correlation_confidence * 100)}%</span>
+                  Confidence:{' '}
+                  <span className="text-primary font-bold">
+                    {Math.round(selectedIncident.correlation_confidence * 100)}%
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Timeline Feed */}
+          {/* Timeline feed */}
           {timelineLoading ? (
             <div className="flex items-center justify-center p-12 bg-surface rounded border border-surface-border">
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -258,55 +310,78 @@ export default function TimelinePage() {
               ) : (
                 <div className="relative">
                   {/* Vertical connector line */}
-                  <div className="absolute left-[22px] top-2 bottom-2 w-px bg-surface-border" />
+                  <div className="timeline-connector" />
 
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     {timeline.map((event, i) => {
                       const typeKey = event.type.toLowerCase();
                       const icon = ICONS[typeKey] || <Zap className="w-3.5 h-3.5" />;
                       const colorClass = ICON_COLORS[typeKey] || 'bg-surface border-surface-border text-text-primary';
+                      const phase = getPhase(i, total);
+                      const showPhaseDivider = phase !== lastPhase;
+                      if (showPhaseDivider) lastPhase = phase;
+                      const phaseInfo = PHASE_LABELS[phase];
+                      const accumulated = isMock ? getAccumulatedRevenue(i) : 0;
 
                       return (
-                        <div key={i} className="relative flex gap-4">
-                          {/* Icon */}
-                          <div className={`relative z-10 flex-shrink-0 w-11 h-11 rounded-lg border flex items-center justify-center ${colorClass}`}>
-                            {icon}
-                          </div>
+                        <React.Fragment key={i}>
+                          {/* Phase label divider */}
+                          {showPhaseDivider && (
+                            <div className={`phase-label ${phaseInfo.color} my-4`}>
+                              {phaseInfo.label}
+                            </div>
+                          )}
 
-                          {/* Content */}
-                          <div className="flex-1 min-w-0 pt-0.5">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-semibold text-text-primary leading-snug">
-                                  {event.title}
-                                </div>
-                                <div className="text-xs text-text-secondary mt-1 leading-relaxed">
-                                  {event.message}
-                                </div>
-                              </div>
-                              <div className="flex-shrink-0 text-right">
-                                <div className="text-xs font-mono text-text-primary">
-                                  {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </div>
-                                <div className="text-3xs text-text-muted mt-0.5">
-                                  {new Date(event.timestamp).toLocaleDateString()}
-                                </div>
-                              </div>
+                          {/* Event row */}
+                          <div className="relative flex gap-4 animate-fade-in">
+                            {/* Icon bubble */}
+                            <div className={`relative z-10 flex-shrink-0 w-11 h-11 rounded-lg border-2 flex items-center justify-center ${colorClass}`}>
+                              {icon}
                             </div>
 
-                            {/* Metadata */}
-                            {event.metadata && Object.keys(event.metadata).length > 0 && (
-                              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                {Object.entries(event.metadata).map(([k, v]) => (
-                                  <div key={k} className="flex items-center gap-1 px-2 py-0.5 rounded bg-surface border border-surface-border text-2xs">
-                                    <span className="text-text-muted font-medium">{k}:</span>
-                                    <span className="text-text-primary font-mono">{String(v)}</span>
+                            {/* Content */}
+                            <div className="flex-1 min-w-0 pt-0.5">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-semibold text-text-primary leading-snug">
+                                    {event.title}
                                   </div>
-                                ))}
+                                  <div className="text-xs text-text-secondary mt-1 leading-relaxed">
+                                    {event.message}
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 text-right space-y-1">
+                                  <div className="text-xs font-mono text-text-primary tabular-nums">
+                                    {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                  </div>
+                                  <div className="text-3xs text-text-muted">
+                                    {new Date(event.timestamp).toLocaleDateString()}
+                                  </div>
+                                  {isMock && accumulated > 0 && (
+                                    <div className="flex items-center gap-1 justify-end">
+                                      <TrendingDown className="w-2.5 h-2.5 text-danger" />
+                                      <span className="text-3xs font-bold text-danger tabular-nums">
+                                        ${accumulated.toLocaleString()} lost
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            )}
+
+                              {/* Metadata chips */}
+                              {event.metadata && Object.keys(event.metadata).length > 0 && (
+                                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                  {Object.entries(event.metadata).map(([k, v]) => (
+                                    <div key={k} className="flex items-center gap-1 px-2 py-0.5 rounded bg-surface border border-surface-border text-2xs">
+                                      <span className="text-text-muted font-medium">{k}:</span>
+                                      <span className="text-text-primary font-mono">{String(v)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        </React.Fragment>
                       );
                     })}
                   </div>

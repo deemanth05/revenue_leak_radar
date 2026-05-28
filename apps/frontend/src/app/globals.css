@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -15,6 +15,7 @@
     --header-height: 56px;
     --transition-fast: 120ms ease;
     --transition-base: 200ms ease;
+    --transition-slow: 350ms ease;
   }
 
   * {
@@ -36,8 +37,8 @@
 
   /* Scrollbars */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
     @apply bg-background-secondary;
@@ -59,10 +60,55 @@
   /* ---- Cards --------------------------------------------------------------- */
   .card {
     @apply bg-surface rounded-lg border border-surface-border shadow-card;
+    transition: box-shadow var(--transition-base), border-color var(--transition-base);
+  }
+
+  .card:hover {
+    @apply shadow-card-hover border-surface-border;
   }
 
   .card-elevated {
     @apply bg-surface-elevated rounded-lg border border-surface-border shadow-card;
+    transition: box-shadow var(--transition-base);
+  }
+
+  .card-critical {
+    @apply bg-surface rounded-lg border border-surface-border shadow-card border-l-2 border-l-danger;
+    box-shadow: theme('boxShadow.card'), theme('boxShadow.glow-danger');
+  }
+
+  .card-warning {
+    @apply bg-surface rounded-lg border border-surface-border shadow-card border-l-2 border-l-warning;
+    box-shadow: theme('boxShadow.card'), theme('boxShadow.glow-warning');
+  }
+
+  .card-success {
+    @apply bg-surface rounded-lg border border-surface-border shadow-card border-l-2 border-l-success;
+  }
+
+  /* ---- Glass panel --------------------------------------------------------- */
+  .glass-panel {
+    background: rgba(17, 24, 39, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    @apply border border-surface-border/60 rounded-lg;
+  }
+
+  /* ---- Skeleton loading ---------------------------------------------------- */
+  .skeleton {
+    @apply bg-surface-elevated rounded;
+    background: linear-gradient(
+      90deg,
+      theme('colors.surface.elevated') 25%,
+      theme('colors.surface.border') 50%,
+      theme('colors.surface.elevated') 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-3 rounded;
   }
 
   /* ---- Severity Badges ----------------------------------------------------- */
@@ -82,9 +128,38 @@
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide bg-surface-border text-text-secondary border border-surface-border;
   }
 
+  .badge-coral {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide bg-coral-muted text-coral border border-coral/20;
+  }
+
+  /* ---- Tags (compact labels) ----------------------------------------------- */
+  .tag {
+    @apply inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium;
+  }
+
+  .tag-coral {
+    @apply tag bg-coral-muted text-coral border border-coral/20;
+  }
+
+  .tag-operational {
+    @apply tag bg-surface-elevated text-text-secondary border border-surface-border;
+  }
+
+  .tag-danger {
+    @apply tag bg-danger-muted text-danger border border-danger/20;
+  }
+
+  .tag-warning {
+    @apply tag bg-warning-muted text-warning border border-warning/20;
+  }
+
+  .tag-success {
+    @apply tag bg-success-muted text-success border border-success/20;
+  }
+
   /* ---- Status Indicators --------------------------------------------------- */
   .status-dot {
-    @apply inline-block w-2 h-2 rounded-full;
+    @apply inline-block w-2 h-2 rounded-full flex-shrink-0;
   }
 
   .status-dot-active {
@@ -113,11 +188,24 @@
 
   /* ---- Revenue Display ----------------------------------------------------- */
   .revenue-value {
-    @apply font-semibold text-danger tabular-nums;
+    @apply font-bold text-danger tabular-nums;
   }
 
   .revenue-value-neutral {
     @apply font-semibold text-text-primary tabular-nums;
+  }
+
+  /* ---- Metric sizes -------------------------------------------------------- */
+  .metric-large {
+    @apply text-5xl font-bold tabular-nums tracking-tight;
+  }
+
+  .metric-medium {
+    @apply text-3xl font-bold tabular-nums;
+  }
+
+  .metric-small {
+    @apply text-xl font-semibold tabular-nums;
   }
 
   /* ---- Table --------------------------------------------------------------- */
@@ -126,7 +214,7 @@
   }
 
   .data-table th {
-    @apply text-left text-2xs font-semibold uppercase tracking-widest text-text-muted py-2 px-3 border-b border-surface-border;
+    @apply text-left text-2xs font-semibold uppercase tracking-widest text-text-muted py-2 px-3 border-b border-surface-border sticky top-0 z-10 bg-background-secondary;
   }
 
   .data-table td {
@@ -134,11 +222,19 @@
   }
 
   .data-table tr:hover td {
-    @apply bg-surface-elevated/50;
+    background-color: rgba(37, 99, 235, 0.04);
   }
 
   .data-table tr:last-child td {
     @apply border-b-0;
+  }
+
+  .data-table tr.row-critical td {
+    @apply border-l-2 border-l-danger;
+  }
+
+  .data-table tr.row-warning td {
+    @apply border-l-2 border-l-warning;
   }
 
   /* ---- Buttons ------------------------------------------------------------- */
@@ -157,6 +253,30 @@
   .btn-danger {
     @apply inline-flex items-center gap-2 px-3 py-1.5 rounded bg-danger-muted text-danger text-sm font-medium border border-danger/20
            hover:bg-danger hover:text-white transition-colors duration-[var(--transition-fast)];
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-2.5 py-1.5 rounded text-text-muted text-sm font-medium
+           hover:text-text-primary hover:bg-surface-elevated transition-colors duration-[var(--transition-fast)];
+  }
+
+  /* ---- Alert Banners ------------------------------------------------------- */
+  .alert-banner-critical {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg border;
+    background: rgba(69, 10, 10, 0.6);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+
+  .alert-banner-warning {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg border;
+    background: rgba(69, 26, 3, 0.6);
+    border-color: rgba(245, 158, 11, 0.4);
+  }
+
+  .alert-banner-info {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg border;
+    background: rgba(30, 58, 110, 0.6);
+    border-color: rgba(37, 99, 235, 0.4);
   }
 
   /* ---- KPI Cards ----------------------------------------------------------- */
@@ -184,11 +304,31 @@
   .nav-item {
     @apply flex items-center gap-3 px-3 py-2 rounded text-sm text-text-secondary
            hover:bg-surface-elevated hover:text-text-primary transition-colors duration-[var(--transition-fast)]
-           cursor-pointer;
+           cursor-pointer relative;
   }
 
   .nav-item-active {
-    @apply flex items-center gap-3 px-3 py-2 rounded text-sm text-text-primary bg-primary-muted border border-primary/20;
+    @apply flex items-center gap-3 px-3 py-2 rounded text-sm text-text-primary bg-primary-muted border border-primary/20 relative;
+    border-left: 2px solid theme('colors.primary.DEFAULT');
+  }
+
+  /* ---- Section headers ----------------------------------------------------- */
+  .section-header {
+    @apply text-2xs font-bold uppercase tracking-widest text-text-muted;
+  }
+
+  /* ---- Breadcrumb ---------------------------------------------------------- */
+  .breadcrumb {
+    @apply flex items-center gap-1.5 text-xs text-text-muted;
+  }
+
+  .breadcrumb-sep {
+    @apply text-surface-border;
+  }
+
+  /* ---- Operational divider ------------------------------------------------- */
+  .operational-divider {
+    @apply border-t border-surface-border;
   }
 
   /* ---- Monospace data ------------------------------------------------------ */
@@ -214,6 +354,23 @@
   .confidence-bar-fill {
     @apply h-full rounded-full transition-all duration-500;
   }
+
+  /* ---- Timeline phase labels ----------------------------------------------- */
+  .phase-label {
+    @apply flex items-center gap-3 text-2xs uppercase tracking-widest font-bold text-text-muted;
+  }
+
+  .phase-label::before,
+  .phase-label::after {
+    content: '';
+    @apply flex-1 h-px bg-surface-border;
+  }
+
+  /* ---- Timeline connector -------------------------------------------------- */
+  .timeline-connector {
+    @apply absolute left-[21px] top-2 bottom-2 w-px;
+    background: linear-gradient(to bottom, theme('colors.surface.border'), transparent);
+  }
 }
 
 @layer utilities {
@@ -231,8 +388,44 @@
     animation: fadeIn 0.2s ease-out;
   }
 
+  .animate-slide-up {
+    animation: slideUp 0.25s ease-out;
+  }
+
+  /* Tabular numbers everywhere for data stability */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Gradient text */
+  .text-gradient-danger {
+    background: linear-gradient(135deg, #EF4444, #F59E0B);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-revenue {
+    background: linear-gradient(135deg, #8B5CF6, #2563EB);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   /* Gradient borders */
   .border-gradient-danger {
     border-image: linear-gradient(to right, #EF4444, #F59E0B) 1;
+  }
+
+  /* Content density levels */
+  .density-compact td,
+  .density-compact th {
+    @apply py-1.5 px-2;
+  }
+
+  .density-comfortable td,
+  .density-comfortable th {
+    @apply py-3 px-3;
   }
 }

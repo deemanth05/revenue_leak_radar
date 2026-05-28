@@ -16,12 +16,13 @@ import {
   Cpu,
   Database,
   Play as MonitorPlay,
+  Siren,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3, id: 'nav-dashboard' },
-  { href: '/incidents', label: 'Incidents', icon: AlertTriangle, id: 'nav-incidents', badge: 3 },
+  { href: '/incidents', label: 'Incidents', icon: AlertTriangle, id: 'nav-incidents', badge: 3, badgeCritical: true },
   { href: '/revenue-risk', label: 'Revenue Risk', icon: Activity, id: 'nav-revenue' },
   { href: '/executive-reports', label: 'Executive Reports', icon: FileText, id: 'nav-executive' },
   { href: '/timeline', label: 'Timeline', icon: Clock, id: 'nav-timeline' },
@@ -49,19 +50,23 @@ export function Sidebar() {
           <div className="text-sm font-bold text-text-primary leading-none">Revenue Leak</div>
           <div className="text-2xs font-medium text-text-muted leading-none mt-0.5">Radar</div>
         </div>
-        <div className="ml-auto">
-          <span className="live-indicator text-2xs">LIVE</span>
+        <div className="ml-auto flex items-center gap-1.5">
+          {/* Critical incident count badge */}
+          <div
+            className="flex items-center justify-center w-5 h-5 rounded-full bg-danger text-white text-2xs font-bold animate-pulse"
+            title="3 active critical incidents"
+          >
+            3
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-3 overflow-y-auto">
-        <div className="text-2xs font-semibold uppercase tracking-widest text-text-muted px-3 pb-2">
-          Operations
-        </div>
+        <div className="section-header px-3 pb-2">Operations</div>
         <ul className="space-y-0.5">
           {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             const Icon = item.icon;
             return (
               <li key={item.href}>
@@ -73,19 +78,33 @@ export function Sidebar() {
                   <Icon className="w-4 h-4 flex-shrink-0" />
                   <span className="flex-1">{item.label}</span>
                   {item.badge && (
-                    <span className="flex items-center justify-center w-4.5 h-4.5 rounded-full text-2xs font-bold bg-danger text-white min-w-[18px] px-1">
+                    <span className={cn(
+                      'flex items-center justify-center rounded-full text-2xs font-bold min-w-[18px] px-1 h-[18px]',
+                      item.badgeCritical
+                        ? 'bg-danger text-white animate-pulse'
+                        : 'bg-surface-elevated text-text-secondary border border-surface-border'
+                    )}>
                       {item.badge}
                     </span>
                   )}
                 </Link>
+                {/* War Room quick-launch for Incidents */}
+                {item.href === '/incidents' && (
+                  <Link
+                    href="/incidents"
+                    id="nav-war-room"
+                    className="flex items-center gap-2 ml-7 mt-0.5 px-2 py-1 rounded text-2xs font-bold text-danger hover:bg-danger-muted transition-colors border border-danger/20 bg-danger-muted/30"
+                  >
+                    <Siren className="w-3 h-3" />
+                    <span>WAR ROOM →</span>
+                  </Link>
+                )}
               </li>
             );
           })}
         </ul>
 
-        <div className="mt-4 text-2xs font-semibold uppercase tracking-widest text-text-muted px-3 pb-2">
-          AI Intelligence & Simulation
-        </div>
+        <div className="mt-4 section-header px-3 pb-2">AI Intelligence & Simulation</div>
         <ul className="space-y-0.5">
           <li>
             <Link
@@ -113,8 +132,9 @@ export function Sidebar() {
               href="/coral"
               className={cn(pathname === '/coral' ? 'nav-item-active' : 'nav-item')}
             >
-              <Database className="w-4 h-4 flex-shrink-0 text-primary" />
-              <span className="flex-1">Coral Indexer</span>
+              <Database className="w-4 h-4 flex-shrink-0 text-coral" />
+              <span className="flex-1 text-coral">Coral Indexer</span>
+              <span className="tag-coral text-3xs px-1 py-0.5 rounded font-bold">AI</span>
             </Link>
           </li>
           <li>
@@ -129,9 +149,7 @@ export function Sidebar() {
           </li>
         </ul>
 
-        <div className="mt-4 text-2xs font-semibold uppercase tracking-widest text-text-muted px-3 pb-2">
-          Evaluation
-        </div>
+        <div className="mt-4 section-header px-3 pb-2">Evaluation</div>
         <ul className="space-y-0.5">
           <li>
             <Link
@@ -164,10 +182,23 @@ export function Sidebar() {
           );
         })}
 
-        {/* Environment indicator */}
-        <div className="mt-2 px-3 py-2 rounded bg-surface border border-surface-border">
-          <div className="text-2xs text-text-muted">Environment</div>
-          <div className="text-xs font-medium text-success">● Development</div>
+        {/* Revenue at Risk quick metric */}
+        <div className="mt-2 px-3 py-2 rounded bg-danger-muted/40 border border-danger/20">
+          <div className="text-2xs text-text-muted">Revenue at Risk</div>
+          <div className="text-sm font-bold text-danger tabular-nums mt-0.5">$54.2k/day</div>
+        </div>
+
+        {/* Environment + system health indicator */}
+        <div className="mt-1 px-3 py-2 rounded bg-surface border border-surface-border">
+          <div className="flex items-center justify-between">
+            <div className="text-2xs text-text-muted">Environment</div>
+            <div className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-success" title="API healthy" />
+              <span className="w-1.5 h-1.5 rounded-full bg-success" title="DB healthy" />
+              <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" title="Engine processing" />
+            </div>
+          </div>
+          <div className="text-xs font-medium text-success mt-0.5">● Development</div>
         </div>
       </div>
     </aside>

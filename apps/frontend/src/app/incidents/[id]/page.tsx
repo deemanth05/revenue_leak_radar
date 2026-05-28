@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { incidentsApi, remediationApi, executiveApi } from '@/lib/api';
 import { formatRevenueDaily, formatRelativeTime, cn } from '@/lib/utils';
+import { CorrelationFlowGraph } from '@/components/charts/CorrelationFlowGraph';
 import type { Incident, RemediationAction } from '@rlr/schemas';
 
 interface PageProps {
@@ -477,6 +478,9 @@ export default function IncidentWarRoomPage({ params }: PageProps) {
           </span>
         </div>
       </div>
+
+      {/* Correlation Flow Graph — animated causal chain */}
+      <CorrelationFlowGraph incident={incident} />
 
       {/* Section: Dynamic Correlation Pipeline Graph */}
       <div className="card p-6 bg-surface-elevated/10 relative overflow-hidden">
