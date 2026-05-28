@@ -21,7 +21,7 @@ COPY apps/frontend ./apps/frontend
 
 # Install dependencies using the lockfile
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm --filter frontend build
+RUN mkdir -p apps/frontend/public && pnpm --filter frontend build
 
 # Production runner stage
 FROM base AS runner
