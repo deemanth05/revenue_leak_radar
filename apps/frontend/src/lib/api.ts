@@ -119,6 +119,20 @@ export const executiveApi = {
     }),
 };
 
+// --- Remediation ---
+
+export const remediationApi = {
+  list: (incidentId: string): Promise<any[]> =>
+    apiFetch(`/remediation/${incidentId}`),
+  generate: (incidentId: string): Promise<any[]> =>
+    apiFetch(`/remediation/${incidentId}/generate`, { method: 'POST' }),
+  updateStatus: (actionId: string, status: string): Promise<any> =>
+    apiFetch(`/remediation/actions/${actionId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+};
+
 // --- System Health ---
 
 export const healthApi = {
