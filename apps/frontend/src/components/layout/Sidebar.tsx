@@ -13,11 +13,13 @@ import {
   Settings,
   Zap,
   Cpu,
+  Database,
+  Play as MonitorPlay,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard', icon: BarChart3, id: 'nav-dashboard' },
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3, id: 'nav-dashboard' },
   { href: '/incidents', label: 'Incidents', icon: AlertTriangle, id: 'nav-incidents', badge: 3 },
   { href: '/revenue-risk', label: 'Revenue Risk', icon: Activity, id: 'nav-revenue' },
   { href: '/executive-reports', label: 'Executive Reports', icon: FileText, id: 'nav-executive' },
@@ -102,6 +104,26 @@ export function Sidebar() {
             >
               <Cpu className="w-4 h-4 flex-shrink-0" />
               <span className="flex-1">Simulation Control</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              id="nav-coral"
+              href="/coral"
+              className={cn(pathname === '/coral' ? 'nav-item-active' : 'nav-item')}
+            >
+              <Database className="w-4 h-4 flex-shrink-0 text-primary" />
+              <span className="flex-1">Coral Indexer</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              id="nav-presentation"
+              href="/presentation"
+              className={cn(pathname === '/presentation' ? 'nav-item-active' : 'nav-item')}
+            >
+              <MonitorPlay className="w-4 h-4 flex-shrink-0 text-success" />
+              <span className="flex-1">Cinematic Demo</span>
             </Link>
           </li>
         </ul>
