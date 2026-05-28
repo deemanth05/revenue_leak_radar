@@ -168,7 +168,12 @@ async def get_latest_summary(db: AsyncSession = Depends(get_db)) -> ExecutiveSum
 
 def _load_prompt_template(role: str) -> tuple[str, str]:
     """Helper to load system and user prompt templates for a specific role."""
-    filename = f"{role}_summary.md" if role != "customer" else "customer_update.md"
+    if role == "customer":
+        filename = "customer_update.md"
+    elif role == "board":
+        filename = "board_briefing.md"
+    else:
+        filename = f"{role}_summary.md"
     default_systems = {
         "cto": "You are the Technical Incident Summarizer for Revenue Leak Radar. Focus on technical causes and system impact. Return ONLY JSON.",
         "board": "You are the Business Incident Analyst for Revenue Leak Radar. Focus on commercial exposure, MRR risk and SLA breaches. Return ONLY JSON.",
