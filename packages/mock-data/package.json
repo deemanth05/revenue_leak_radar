@@ -1,0 +1,6 @@
+{
+  "name": "@rlr/mock-data",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Synthetic operational data generators for Revenue Leak Radar"
+}

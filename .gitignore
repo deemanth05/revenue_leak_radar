@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python virtual environment
+apps/backend/.venv/
+apps/backend/venv/
+*.venv
+
+# Next.js
+apps/frontend/.next/
+apps/frontend/out/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Alembic (keep versions, ignore pycache)
+apps/backend/alembic/__pycache__/
+apps/backend/alembic/versions/__pycache__/
+
+# Temp
+tmp/
+temp/
+scratch/

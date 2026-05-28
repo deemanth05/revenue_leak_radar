@@ -1,0 +1,30 @@
+{
+  "name": "revenue-leak-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered operational intelligence platform — correlates engineering incidents with revenue impact",
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "build:frontend": "pnpm --filter frontend build",
+    "lint": "pnpm --filter frontend lint",
+    "seed": "python apps/backend/seed/demo_scenario.py",
+    "validate": "python scripts/validate_env.py",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:reset": "docker-compose down -v && docker-compose up -d",
+    "migrate": "cd apps/backend && alembic upgrade head",
+    "setup": "powershell -ExecutionPolicy Bypass -File scripts/setup.ps1"
+  },
+  "workspaces": [
+    "apps/frontend",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@rlr/agent-prompts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable AI prompt templates for Revenue Leak Radar intelligence agents"
+}

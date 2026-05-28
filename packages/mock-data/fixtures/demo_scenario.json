@@ -1,0 +1,168 @@
+{
+  "scenario_name": "Checkout Failure \u2014 $42k/day Revenue Risk",
+  "scenario_version": "1.0.0",
+  "description": "A webhook retry logic change in PR #2847 caused Stripe PaymentIntent timeouts. Revenue Leak Radar auto-correlated 47 Sentry alerts + 89 payment failures + 67 support tickets back to commit abc123f within 90 seconds.",
+
+  "deployment": {
+    "id": "deploy_abc123f_prod",
+    "commit_hash": "abc123f",
+    "repository": "checkout-service",
+    "branch": "main",
+    "environment": "production",
+    "status": "success",
+    "author": "alice.chen",
+    "deployed_at": "T-90min",
+    "pr_number": 2847,
+    "pr_title": "feat(checkout): add retry logic for Stripe webhook delivery",
+    "change_type": "feature",
+    "files_changed": 12,
+    "lines_added": 287,
+    "lines_removed": 43,
+    "rollback_available": true
+  },
+
+  "incident": {
+    "id": "inc_checkout_abc123f",
+    "title": "Checkout Service Payment Failure - Deployment abc123f",
+    "severity": "critical",
+    "status": "active",
+    "service": "checkout-service",
+    "root_cause_deployment": "abc123f",
+    "estimated_revenue_impact_daily": 42000,
+    "estimated_revenue_impact_monthly": 1260000,
+    "correlation_confidence": 0.94,
+    "affected_customer_count": 424,
+    "affected_enterprise_count": 3,
+    "affected_premium_count": 421,
+    "time_to_detect_seconds": 90,
+    "summary": "Payment processing failures spiked 340% immediately after deployment abc123f on checkout-service. 89 Stripe payment intents failed in the first 55 minutes. 70% of failures classified as processing_error."
+  },
+
+  "metrics": {
+    "payment_failures": 89,
+    "support_tickets": 67,
+    "alerts": 47,
+    "affected_enterprise": 3,
+    "affected_premium": 421,
+    "total_affected": 424,
+    "correlation_confidence": 0.94,
+    "time_to_detect_seconds": 90,
+    "total_failed_amount_cents": 4287350,
+    "total_failed_amount_display": "$42,873.50",
+    "failure_reason_breakdown": {
+      "processing_error": 62,
+      "timeout": 9,
+      "card_declined": 11,
+      "insufficient_funds": 7
+    },
+    "alert_severity_breakdown": {
+      "critical": 3,
+      "high": 12,
+      "warning": 22,
+      "info": 10
+    },
+    "ticket_priority_breakdown": {
+      "urgent": 14,
+      "high": 27,
+      "normal": 20,
+      "low": 6
+    }
+  },
+
+  "timeline": [
+    {
+      "t_offset_minutes": 0,
+      "event": "Deployment abc123f pushed to production",
+      "actor": "alice.chen",
+      "type": "deployment",
+      "service": "checkout-service"
+    },
+    {
+      "t_offset_minutes": 5,
+      "event": "Sentry: PaymentProcessor.process() raised TimeoutError \u00d712",
+      "actor": "system",
+      "type": "alert",
+      "service": "checkout-service"
+    },
+    {
+      "t_offset_minutes": 7,
+      "event": "Sentry: CheckoutService HTTP 500 rate 340/min",
+      "actor": "system",
+      "type": "alert",
+      "service": "checkout-service"
+    },
+    {
+      "t_offset_minutes": 10,
+      "event": "Stripe: payment failure rate crossed 5% threshold (89 failures)",
+      "actor": "system",
+      "type": "payment",
+      "service": "payment-processor"
+    },
+    {
+      "t_offset_minutes": 10,
+      "event": "Zendesk: first support tickets arrive (Payment failed, Cannot complete purchase)",
+      "actor": "customers",
+      "type": "support",
+      "service": "zendesk"
+    },
+    {
+      "t_offset_minutes": 15,
+      "event": "Revenue Leak Radar: auto-correlation triggered",
+      "actor": "rlr-engine",
+      "type": "correlation",
+      "service": "rlr"
+    },
+    {
+      "t_offset_minutes": 16,
+      "event": "Revenue Leak Radar: incident created (confidence 0.94, impact $42k/day)",
+      "actor": "rlr-engine",
+      "type": "incident",
+      "service": "rlr"
+    },
+    {
+      "t_offset_minutes": 18,
+      "event": "Recommended action: rollback abc123f (5min recovery, low risk)",
+      "actor": "rlr-engine",
+      "type": "recommendation",
+      "service": "rlr"
+    },
+    {
+      "t_offset_minutes": 20,
+      "event": "Zendesk surge: 15 tickets in 10 minutes",
+      "actor": "customers",
+      "type": "support",
+      "service": "zendesk"
+    },
+    {
+      "t_offset_minutes": 25,
+      "event": "3 enterprise SLA customers flagged for proactive notification",
+      "actor": "rlr-engine",
+      "type": "customer",
+      "service": "rlr"
+    }
+  ],
+
+  "recommended_actions": [
+    {
+      "priority": 1,
+      "action": "Rollback deployment abc123f on checkout-service",
+      "estimated_recovery_minutes": 5,
+      "risk": "low",
+      "rationale": "Revert PR #2847 webhook retry logic — direct root cause of TimeoutErrors"
+    },
+    {
+      "priority": 2,
+      "action": "Retry 89 failed Stripe payment intents via reconciliation job",
+      "estimated_recovery_minutes": 30,
+      "risk": "medium",
+      "rationale": "62 of 89 failures are retriable processing_error type — customers can recover without re-entering cards"
+    },
+    {
+      "priority": 3,
+      "action": "Proactively notify 3 enterprise customers (SLA breach risk)",
+      "estimated_recovery_minutes": 15,
+      "risk": "low",
+      "rationale": "Enterprise SLA requires <30min notification for critical incidents"
+    }
+  ]
+}

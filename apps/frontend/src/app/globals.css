@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   Revenue Leak Radar — Global Styles
+   Enterprise Operational Intelligence Theme
+   ============================================================================ */
+
+@layer base {
+  :root {
+    --sidebar-width: 240px;
+    --header-height: 56px;
+    --transition-fast: 120ms ease;
+    --transition-base: 200ms ease;
+  }
+
+  * {
+    border-color: theme('colors.border.DEFAULT');
+  }
+
+  html {
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-text-primary font-sans;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-background-secondary;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary-muted text-text-primary;
+  }
+}
+
+@layer components {
+  /* ---- Cards --------------------------------------------------------------- */
+  .card {
+    @apply bg-surface rounded-lg border border-surface-border shadow-card;
+  }
+
+  .card-elevated {
+    @apply bg-surface-elevated rounded-lg border border-surface-border shadow-card;
+  }
+
+  /* ---- Severity Badges ----------------------------------------------------- */
+  .badge-critical {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide bg-danger-muted text-danger border border-danger/20;
+  }
+
+  .badge-high {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide bg-warning-muted text-warning border border-warning/20;
+  }
+
+  .badge-medium {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide bg-primary-muted text-primary border border-primary/20;
+  }
+
+  .badge-low {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-semibold uppercase tracking-wide bg-surface-border text-text-secondary border border-surface-border;
+  }
+
+  /* ---- Status Indicators --------------------------------------------------- */
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+
+  .status-dot-active {
+    @apply status-dot bg-danger animate-pulse;
+  }
+
+  .status-dot-investigating {
+    @apply status-dot bg-warning animate-pulse-slow;
+  }
+
+  .status-dot-resolved {
+    @apply status-dot bg-success;
+  }
+
+  .status-dot-healthy {
+    @apply status-dot bg-success;
+  }
+
+  .status-dot-degraded {
+    @apply status-dot bg-warning animate-pulse-slow;
+  }
+
+  .status-dot-down {
+    @apply status-dot bg-danger animate-pulse;
+  }
+
+  /* ---- Revenue Display ----------------------------------------------------- */
+  .revenue-value {
+    @apply font-semibold text-danger tabular-nums;
+  }
+
+  .revenue-value-neutral {
+    @apply font-semibold text-text-primary tabular-nums;
+  }
+
+  /* ---- Table --------------------------------------------------------------- */
+  .data-table {
+    @apply w-full text-sm;
+  }
+
+  .data-table th {
+    @apply text-left text-2xs font-semibold uppercase tracking-widest text-text-muted py-2 px-3 border-b border-surface-border;
+  }
+
+  .data-table td {
+    @apply py-3 px-3 border-b border-surface-border/50 text-text-primary;
+  }
+
+  .data-table tr:hover td {
+    @apply bg-surface-elevated/50;
+  }
+
+  .data-table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* ---- Buttons ------------------------------------------------------------- */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded bg-primary text-white text-sm font-medium
+           hover:bg-primary-hover transition-colors duration-[var(--transition-fast)]
+           focus:outline-none focus:ring-2 focus:ring-primary/50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded bg-surface-elevated text-text-secondary text-sm font-medium border border-surface-border
+           hover:text-text-primary hover:border-border-accent transition-colors duration-[var(--transition-fast)]
+           focus:outline-none focus:ring-2 focus:ring-primary/30;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded bg-danger-muted text-danger text-sm font-medium border border-danger/20
+           hover:bg-danger hover:text-white transition-colors duration-[var(--transition-fast)];
+  }
+
+  /* ---- KPI Cards ----------------------------------------------------------- */
+  .kpi-card {
+    @apply card p-4 flex flex-col gap-3;
+  }
+
+  .kpi-value {
+    @apply text-3xl font-bold text-text-primary tabular-nums;
+  }
+
+  .kpi-label {
+    @apply text-xs font-medium text-text-muted uppercase tracking-wide;
+  }
+
+  .kpi-change-positive {
+    @apply text-xs font-medium text-success;
+  }
+
+  .kpi-change-negative {
+    @apply text-xs font-medium text-danger;
+  }
+
+  /* ---- Navigation ---------------------------------------------------------- */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded text-sm text-text-secondary
+           hover:bg-surface-elevated hover:text-text-primary transition-colors duration-[var(--transition-fast)]
+           cursor-pointer;
+  }
+
+  .nav-item-active {
+    @apply flex items-center gap-3 px-3 py-2 rounded text-sm text-text-primary bg-primary-muted border border-primary/20;
+  }
+
+  /* ---- Monospace data ------------------------------------------------------ */
+  .mono {
+    @apply font-mono text-xs;
+  }
+
+  /* ---- Animated live indicator --------------------------------------------- */
+  .live-indicator {
+    @apply flex items-center gap-1.5 text-xs text-success font-medium;
+  }
+
+  .live-indicator::before {
+    content: '';
+    @apply block w-1.5 h-1.5 rounded-full bg-success animate-pulse;
+  }
+
+  /* ---- Confidence bar ------------------------------------------------------ */
+  .confidence-bar {
+    @apply h-1 rounded-full bg-surface-border overflow-hidden;
+  }
+
+  .confidence-bar-fill {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .grid-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  /* Gradient borders */
+  .border-gradient-danger {
+    border-image: linear-gradient(to right, #EF4444, #F59E0B) 1;
+  }
+}
