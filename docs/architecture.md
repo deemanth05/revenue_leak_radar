@@ -138,6 +138,18 @@ Feeds the event ingestion pipeline step-by-step for 6 distinct demo scenarios:
 * **Silent Subscription renewal declines** (Silent MRR churn leak).
 * **Checkout Performance Latency Spike** (checkout page slowdown).
 
+### 5. Incident Memory Similarity Engine (`incident_memory.py`)
+Provides deterministic similarity matching against resolved past outages:
+* **Overlaps**: Scans past resolved/closed incidents.
+* **Score Multipliers**: Weights codebase repository overlaps (0.4), error and alert signature keywords (0.4), and direct payment conversion failure symptoms (0.2).
+* **RCA Recurrence**: Yields exact matches and reasons to aid debugging and avoid duplicate triaging.
+
+### 6. Role Briefings Router (`executive_summaries.py`)
+Bridges structured system prompt templates in `agent-prompts` package with target roles:
+* **CTO Engineering RCA**: Focuses on commit hashes, backend anomalies, Sentry exceptions, database locks, and immediate rollbacks.
+* **Board Financial Update**: Focuses on commercial risk, MRR exposure, contractual SLA penalties, and business mitigations.
+* **Customer Support Update**: Focuses on public headline alerts and empathetic status updates without exposing internal technical telemetry.
+
 ---
 
 ## Data Flow
