@@ -123,6 +123,7 @@ from routers.timeline import router as timeline_router
 from routers.simulations import router as simulations_router
 from routers.auth import router as auth_router
 from routers.integrations import router as integrations_router
+from routers.coral import router as coral_router
 
 # Health lives at root level (/health)
 app.include_router(health_router)
@@ -139,6 +140,7 @@ app.include_router(timeline_router, prefix=API_PREFIX)
 app.include_router(simulations_router, prefix=API_PREFIX)
 app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(integrations_router, prefix=API_PREFIX)
+app.include_router(coral_router, prefix=API_PREFIX)
 
 
 

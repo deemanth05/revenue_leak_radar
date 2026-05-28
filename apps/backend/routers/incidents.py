@@ -375,31 +375,58 @@ async def get_incident_timeline(
     return timeline_events
 
 
-# In-memory incident comments store for collaboration
-_INCIDENT_COMMENTS: dict[uuid.UUID, list[dict]] = {}
-
 class CommentCreate(BaseModel):
     author: str
     content: str
 
+
 @router.get("/{incident_id}/comments", summary="Get incident triage comments")
-async def get_incident_comments(incident_id: uuid.UUID) -> list[dict]:
+async def get_incident_comments(
+    incident_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
     """Retrieve SRE collaborative triage comments."""
-    return _INCIDENT_COMMENTS.get(incident_id, [])
+    from models.comment import IncidentComment
+
+    result = await db.execute(
+        select(IncidentComment)
+        .where(IncidentComment.incident_id == incident_id)
+        .order_by(IncidentComment.created_at)
+    )
+    return [
+        {
+            "id": str(c.id),
+            "author": c.author,
+            "content": c.content,
+            "timestamp": c.created_at.isoformat(),
+        }
+        for c in result.scalars().all()
+    ]
+
 
 @router.post("/{incident_id}/comments", summary="Add incident triage comment")
-async def add_incident_comment(incident_id: uuid.UUID, payload: CommentCreate) -> dict:
+async def add_incident_comment(
+    incident_id: uuid.UUID,
+    payload: CommentCreate,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     """Post collaborative triage comment to active bridge."""
-    comment = {
-        "id": str(uuid.uuid4()),
-        "author": payload.author,
-        "content": payload.content,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+    from models.comment import IncidentComment
+
+    comment = IncidentComment(
+        incident_id=incident_id,
+        author=payload.author,
+        content=payload.content,
+    )
+    db.add(comment)
+    await db.flush()
+    await db.refresh(comment)
+    return {
+        "id": str(comment.id),
+        "author": comment.author,
+        "content": comment.content,
+        "timestamp": comment.created_at.isoformat(),
     }
-    if incident_id not in _INCIDENT_COMMENTS:
-        _INCIDENT_COMMENTS[incident_id] = []
-    _INCIDENT_COMMENTS[incident_id].append(comment)
-    return comment
 
 @router.get("/{incident_id}/postmortem", summary="Generate SRE Markdown Postmortem")
 async def get_incident_postmortem(

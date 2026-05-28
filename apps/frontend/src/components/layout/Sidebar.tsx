@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   Activity,
   AlertTriangle,
+  Award,
   BarChart3,
   Clock,
   FileText,
@@ -124,6 +125,23 @@ export function Sidebar() {
             >
               <MonitorPlay className="w-4 h-4 flex-shrink-0 text-success" />
               <span className="flex-1">Cinematic Demo</span>
+            </Link>
+          </li>
+        </ul>
+
+        <div className="mt-4 text-2xs font-semibold uppercase tracking-widest text-text-muted px-3 pb-2">
+          Evaluation
+        </div>
+        <ul className="space-y-0.5">
+          <li>
+            <Link
+              id="nav-judge"
+              href="/judge"
+              className={cn(pathname === '/judge' ? 'nav-item-active' : 'nav-item')}
+            >
+              <Award className="w-4 h-4 flex-shrink-0 text-warning" />
+              <span className="flex-1">Judge Mode</span>
+              <span className="px-1.5 py-0.5 rounded text-3xs font-bold bg-warning-muted text-warning border border-warning/20">DEMO</span>
             </Link>
           </li>
         </ul>

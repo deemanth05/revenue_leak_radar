@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Database,
   Search,
@@ -21,6 +21,27 @@ export default function CoralShowcasePage() {
   const [runningQuery, setRunningQuery] = useState(false);
   const [queryLog, setQueryLog] = useState<string[]>([]);
   const [queryDone, setQueryDone] = useState(false);
+  const [apiResult, setApiResult] = useState<Record<string, unknown> | null>(null);
+  const [apiFetching, setApiFetching] = useState(false);
+
+  const fetchCoralData = useCallback(async () => {
+    setApiFetching(true);
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(
+        `${baseUrl}/api/v1/coral/joint-query?window_hours=24`,
+        { method: 'POST' }
+      );
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      const data = await res.json();
+      setApiResult(data);
+    } catch (err) {
+      console.warn('Coral API call failed, using fallback schema:', err);
+      setApiResult(null);
+    } finally {
+      setApiFetching(false);
+    }
+  }, []);
 
   const runCoralJoinQuery = () => {
     setRunningQuery(true);
@@ -52,6 +73,7 @@ export default function CoralShowcasePage() {
         clearInterval(interval);
         setRunningQuery(false);
         setQueryDone(true);
+        fetchCoralData();
       }
     }, 400);
   };
@@ -180,7 +202,15 @@ export default function CoralShowcasePage() {
           </div>
 
           <div className="bg-black/40 border border-surface-border rounded-lg p-4 font-mono text-2xs h-[360px] overflow-y-auto overflow-x-hidden text-text-secondary leading-relaxed">
-            <pre className="whitespace-pre-wrap">{schemaJson}</pre>
+            {apiFetching ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-primary animate-pulse text-xs">● Fetching live data from Coral API...</div>
+              </div>
+            ) : (
+              <pre className="whitespace-pre-wrap">
+                {apiResult ? JSON.stringify(apiResult, null, 2) : schemaJson}
+              </pre>
+            )}
           </div>
         </div>
       </div>

@@ -11,6 +11,8 @@ from models.support_ticket import SupportTicket
 from models.revenue_event import RevenueEvent
 from models.remediation_action import RemediationAction
 from models.operational_event import OperationalEvent, OperationalEventType
+from models.user import User
+from models.comment import IncidentComment
 
 __all__ = [
     "Base",
@@ -25,5 +27,7 @@ __all__ = [
     "RemediationAction",
     "OperationalEvent",
     "OperationalEventType",
+    "User",
+    "IncidentComment",
 ]
 
