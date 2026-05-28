@@ -8,8 +8,8 @@ RUN corepack enable
 FROM base AS builder
 WORKDIR /app
 
-# Copy all configuration and lock files
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# Copy root config files first (package.json contains packageManager field for corepack)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy core workspace packages
 COPY packages/schemas ./packages/schemas
@@ -19,7 +19,7 @@ COPY packages/agent-prompts ./packages/agent-prompts
 # Copy frontend app
 COPY apps/frontend ./apps/frontend
 
-# Install dependencies and build the app
+# Install dependencies using the lockfile
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm --filter frontend build
 
