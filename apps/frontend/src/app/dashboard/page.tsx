@@ -3,9 +3,9 @@ import { KpiCard } from '@/components/dashboard/KpiCard';
 import { RevenueRiskTable } from '@/components/dashboard/RevenueRiskTable';
 import { RevenueImpactChart } from '@/components/charts/RevenueImpactChart';
 import { SeverityBarChart } from '@/components/charts/SeverityBarChart';
-import { incidentsApi, getMockIncidents, getMockDashboardKpis } from '@/lib/api';
-import { formatRevenue, formatNumber, formatDuration } from '@/lib/utils';
-import type { Incident, DashboardKpis } from '@rlr/schemas';
+import { incidentsApi, deploymentsApi, getMockIncidents, getMockDashboardKpis } from '@/lib/api';
+import { formatRevenue, formatNumber, formatDuration, formatRelativeTime, shortHash } from '@/lib/utils';
+import type { Incident, DashboardKpis, Deployment } from '@rlr/schemas';
 
 export const metadata = {
   title: 'Operations Dashboard — Revenue Leak Radar',
@@ -13,23 +13,78 @@ export const metadata = {
 };
 
 export default async function DashboardPage() {
-  let incidents: Incident[];
+  let incidents: Incident[] = [];
   let kpis: DashboardKpis;
+  let deployments: Deployment[] = [];
+  let activeCriticalFull: Incident | null = null;
+  let isUsingMockData = false;
 
   try {
     const listRes = await incidentsApi.list();
     incidents = listRes.items;
     kpis = await incidentsApi.dashboardKpis();
+    
+    try {
+      const depRes = await deploymentsApi.list();
+      deployments = Array.isArray(depRes) ? depRes : ((depRes as any).items || []);
+    } catch (e) {
+      console.warn('Failed to fetch deployments:', e);
+    }
   } catch (error) {
     console.warn('Backend API connection failed, using mock data. Error:', error);
     incidents = getMockIncidents();
     kpis = getMockDashboardKpis();
+    isUsingMockData = true;
   }
 
   // Find if there is an active critical incident to show
   const activeCritical = incidents.find(
     (i) => i.severity === 'critical' && (i.status === 'active' || i.status === 'investigating' || i.status === 'mitigating')
   );
+
+  if (activeCritical && !isUsingMockData) {
+    try {
+      activeCriticalFull = await incidentsApi.get(activeCritical.id);
+    } catch (e) {
+      console.warn('Failed to fetch full critical incident details:', e);
+    }
+  }
+
+  // Find linked deployment IDs from active/investigating incidents
+  const linkedDeploymentIds = new Set(
+    incidents
+      .filter((i) => i.status !== 'resolved' && i.deployment_id)
+      .map((i) => i.deployment_id)
+  );
+
+  // Fallback to mock deployments if none in DB
+  const displayDeployments = deployments.length > 0
+    ? deployments.slice(0, 3).map((dep) => ({
+        hash: shortHash(dep.commit_hash),
+        repo: dep.repository,
+        env: dep.environment,
+        status: dep.status,
+        author: dep.author,
+        time: formatRelativeTime(dep.deployed_at),
+        linked: linkedDeploymentIds.has(dep.id),
+      }))
+    : [
+        { hash: 'abc123f', repo: 'checkout-service', env: 'production', status: 'success', author: 'j.smith', time: '95m ago', linked: true },
+        { hash: 'def456a', repo: 'auth-service', env: 'production', status: 'success', author: 'm.johnson', time: '3h ago', linked: false },
+        { hash: 'ghi789b', repo: 'api-gateway', env: 'staging', status: 'success', author: 's.chen', time: '5h ago', linked: false },
+      ];
+
+  // Dynamic correlation details
+  const rootCauseHash = activeCriticalFull?.deployment?.commit_hash
+    ? shortHash(activeCriticalFull.deployment.commit_hash)
+    : 'abc123f';
+  const rootCauseRepo = activeCriticalFull?.deployment?.repository || 'checkout-service';
+  const correlationConfidence = activeCriticalFull?.correlation_confidence ?? 0.94;
+  const confidencePercent = Math.round(correlationConfidence * 100);
+  
+  const paymentFailuresCount = activeCriticalFull?.payment_failures?.length ?? 89;
+  const supportTicketsCount = activeCriticalFull?.support_tickets?.length ?? 67;
+  const sentryAlertsCount = activeCriticalFull?.alerts?.length ?? 47;
 
   return (
     <div className="space-y-6">
@@ -155,11 +210,7 @@ export default async function DashboardPage() {
         <div className="card p-4">
           <h2 className="text-sm font-semibold text-text-primary mb-3">Recent Deployments</h2>
           <div className="space-y-2">
-            {[
-              { hash: 'abc123f', repo: 'checkout-service', env: 'production', status: 'success', author: 'j.smith', time: '95m ago', linked: true },
-              { hash: 'def456a', repo: 'auth-service', env: 'production', status: 'success', author: 'm.johnson', time: '3h ago', linked: false },
-              { hash: 'ghi789b', repo: 'api-gateway', env: 'staging', status: 'success', author: 's.chen', time: '5h ago', linked: false },
-            ].map((dep) => (
+            {displayDeployments.map((dep) => (
               <div
                 key={dep.hash}
                 className="flex items-center gap-3 px-3 py-2 rounded bg-surface border border-surface-border hover:border-border-accent transition-colors"
@@ -192,22 +243,22 @@ export default async function DashboardPage() {
             <div className="px-3 py-2.5 rounded bg-danger-muted border border-danger/20">
               <div className="text-xs font-semibold text-danger mb-1">⚡ Root Cause Identified</div>
               <div className="text-xs text-text-primary">
-                Deployment <code className="font-mono bg-surface px-1 rounded">abc123f</code> (checkout-service)
+                Deployment <code className="font-mono bg-surface px-1 rounded">{rootCauseHash}</code> ({rootCauseRepo})
                 triggered payment timeout errors in Stripe integration layer.
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <div className="confidence-bar flex-1">
-                  <div className="confidence-bar-fill bg-danger" style={{ width: '94%' }} />
+                  <div className="confidence-bar-fill bg-danger" style={{ width: `${confidencePercent}%` }} />
                 </div>
-                <span className="text-xs font-mono text-danger font-bold">94%</span>
+                <span className="text-xs font-mono text-danger font-bold">{confidencePercent}%</span>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
-                { label: 'Payment Failures', value: '89', color: '#EF4444' },
-                { label: 'Support Tickets', value: '67', color: '#F59E0B' },
-                { label: 'Sentry Alerts', value: '47', color: '#2563EB' },
+                { label: 'Payment Failures', value: paymentFailuresCount.toString(), color: '#EF4444' },
+                { label: 'Support Tickets', value: supportTicketsCount.toString(), color: '#F59E0B' },
+                { label: 'Sentry Alerts', value: sentryAlertsCount.toString(), color: '#2563EB' },
               ].map((signal) => (
                 <div key={signal.label} className="px-2 py-2 rounded bg-surface border border-surface-border">
                   <div className="text-base font-bold" style={{ color: signal.color }}>{signal.value}</div>
