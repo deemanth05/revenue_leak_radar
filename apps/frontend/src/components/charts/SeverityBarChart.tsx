@@ -29,7 +29,6 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: '#475569',
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   return (
