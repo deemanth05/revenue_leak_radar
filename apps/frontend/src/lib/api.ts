@@ -70,6 +70,9 @@ export const incidentsApi = {
 
   timeline: (id: string): Promise<any[]> =>
     apiFetch(`/incidents/${id}/timeline`),
+
+  similar: (id: string): Promise<any[]> =>
+    apiFetch(`/incidents/${id}/similar`),
 };
 
 // --- Revenue ---
@@ -108,6 +111,12 @@ export const executiveApi = {
     }),
 
   latest: (): Promise<ExecutiveSummary> => apiFetch('/executive/latest'),
+
+  generateBriefing: (incidentIds: string[], role: 'cto' | 'board' | 'customer'): Promise<any> =>
+    apiFetch('/executive/generate-briefing', {
+      method: 'POST',
+      body: JSON.stringify({ incident_ids: incidentIds, role }),
+    }),
 };
 
 // --- System Health ---
