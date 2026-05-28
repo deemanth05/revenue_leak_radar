@@ -4,6 +4,7 @@ Executive summaries router.
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -15,7 +16,7 @@ from sqlalchemy.orm import selectinload
 
 from core.database import get_db
 from models.incident import Incident, IncidentStatus
-from schemas.executive import ExecutiveSummaryRequest, ExecutiveSummaryResponse
+from schemas.executive import ExecutiveSummaryRequest, ExecutiveSummaryResponse, RoleBriefingRequest
 from services.ai_provider import get_ai_client
 
 router = APIRouter(prefix="/executive", tags=["executive"])
@@ -159,7 +160,102 @@ async def get_latest_summary(db: AsyncSession = Depends(get_db)) -> ExecutiveSum
             total_incidents_active=0,
         )
 
+            total_revenue_at_risk_daily=Decimal("0.00"),
+            total_incidents_active=0,
+        )
+
     # Generate one automatically
     payload = ExecutiveSummaryRequest(incident_ids=[inc.id for inc in incidents])
     _latest_summary = await generate_executive_summary(payload, db)
     return _latest_summary
+
+
+def _load_prompt_template(role: str) -> tuple[str, str]:
+    """Helper to load system and user prompt templates for a specific role."""
+    filename = f"{role}_summary.md" if role != "customer" else "customer_update.md"
+    default_systems = {
+        "cto": "You are the Technical Incident Summarizer for Revenue Leak Radar. Focus on technical causes and system impact. Return ONLY JSON.",
+        "board": "You are the Business Incident Analyst for Revenue Leak Radar. Focus on commercial exposure, MRR risk and SLA breaches. Return ONLY JSON.",
+        "customer": "You are the Customer Support Communicator for Revenue Leak Radar. Write apologetic status messages. Return ONLY JSON."
+    }
+    default_users = {
+        "cto": "Analyse these incidents: {{incidents_json}}",
+        "board": "Analyse these incidents: {{incidents_json}}",
+        "customer": "Analyse this incident: {{incident_title}}, status: {{status}}"
+    }
+    
+    try:
+        root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        filepath = os.path.join(root_dir, "packages", "agent-prompts", "prompts", filename)
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
+        
+        parts = content.split("## SYSTEM PROMPT")
+        if len(parts) > 1:
+            subparts = parts[1].split("## USER PROMPT TEMPLATE")
+            system_prompt = subparts[0].strip().replace("---", "").strip()
+            user_prompt = subparts[1].split("## EXAMPLE")[0].strip().replace("---", "").strip()
+            return system_prompt, user_prompt
+    except Exception:
+        pass
+        
+    return default_systems.get(role, "Return ONLY valid JSON"), default_users.get(role, "Analyse: {{incidents_json}}")
+
+
+@router.post(
+    "/generate-briefing",
+    summary="Generate role-specific briefing",
+)
+async def generate_role_briefing(
+    payload: RoleBriefingRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Fetch incidents, parse role templates, call AI provider, and return role-customized briefings."""
+    result = await db.execute(
+        select(Incident)
+        .where(Incident.id.in_(payload.incident_ids))
+        .options(
+            selectinload(Incident.deployment),
+            selectinload(Incident.payment_failures),
+            selectinload(Incident.support_tickets),
+            selectinload(Incident.alerts),
+            selectinload(Incident.revenue_event),
+        )
+    )
+    incidents = list(result.scalars().all())
+
+    if not incidents:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No incidents found for provided IDs",
+        )
+
+    system_prompt, user_prompt_template = _load_prompt_template(payload.role)
+    
+    # Perform placeholders replacement
+    context_json = _build_incident_context(incidents)
+    
+    user_prompt = user_prompt_template.replace("{{incidents_json}}", context_json)
+    user_prompt = user_prompt.replace("{{current_timestamp}}", datetime.now(timezone.utc).isoformat())
+    
+    if payload.role == "customer" and incidents:
+        inc = incidents[0]
+        user_prompt = user_prompt.replace("{{incident_title}}", inc.title)
+        user_prompt = user_prompt.replace("{{severity}}", inc.severity)
+        user_prompt = user_prompt.replace("{{status}}", inc.status)
+        user_prompt = user_prompt.replace("{{started_at}}", inc.started_at.isoformat())
+
+    # Call AI Provider
+    ai_client = get_ai_client()
+    raw_response = await ai_client.generate(prompt=user_prompt, system=system_prompt)
+
+    try:
+        parsed = json.loads(raw_response)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"AI provider returned invalid JSON: {exc}",
+        )
+
+    return parsed
+

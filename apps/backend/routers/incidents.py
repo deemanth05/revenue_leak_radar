@@ -34,6 +34,7 @@ from services.correlation_engine import (
     correlate_incident_signals,
     correlate_and_update_incident,
 )
+from services.incident_memory import find_similar_incidents
 
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
@@ -206,6 +207,15 @@ async def get_incident(
 ) -> IncidentResponse:
     incident = await _get_incident_or_404(incident_id, db)
     return IncidentResponse.model_validate(incident)
+
+
+@router.get("/{incident_id}/similar", summary="Get similar resolved incidents")
+async def get_similar_incidents(
+    incident_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Retrieve similar resolved or closed incidents."""
+    return await find_similar_incidents(db, incident_id)
 
 
 @router.post("/", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED, summary="Create incident")

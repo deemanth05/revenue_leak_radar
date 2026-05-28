@@ -8,7 +8,7 @@ from schemas.common import (
     PaginatedResponse,
 )
 from schemas.deployment import DeploymentCreate, DeploymentResponse, DeploymentUpdate
-from schemas.executive import ExecutiveSummaryRequest, ExecutiveSummaryResponse
+from schemas.executive import ExecutiveSummaryRequest, ExecutiveSummaryResponse, RoleBriefingRequest
 from schemas.incident import (
     IncidentCreate,
     IncidentListResponse,
@@ -40,6 +40,7 @@ __all__ = [
     # executive
     "ExecutiveSummaryRequest",
     "ExecutiveSummaryResponse",
+    "RoleBriefingRequest",
     # incident
     "IncidentCreate",
     "IncidentUpdate",

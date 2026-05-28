@@ -44,8 +44,53 @@ _MOCK_EXECUTIVE_SUMMARY = {
 }
 
 
+_MOCK_CTO_SUMMARY = {
+    "technical_summary": "A critical payment processing degradation was detected following checkout-service deployment commit abc123f. HTTP 500 error rates spiked to 18.7%, exhausting the database connection pool due to Stripe API timeout lockups.",
+    "root_cause_analysis": "Commit abc123f introduced a Stripe API webhook signature verification bug, triggering payload parsing timeouts. Threads awaiting gateway responses accumulated, locking the PostgreSQL connection pool.",
+    "system_impact": {
+        "degraded_services": ["checkout-service (HTTP 500 spike)", "payment-processor (timeout rate > 15%)"],
+        "infrastructure_alerts": ["CheckoutService: HTTP 500 rate 340/min", "Stripe API response times > 5000ms"]
+    },
+    "engineering_actions": [
+        "IMMEDIATE: Roll back checkout-service to previous stable release commit f9e8d7c.",
+        "IMMEDIATE: Flush database connection pool to drop hung payment processing threads.",
+        "HIGH: Correct Stripe webhook webhook payload signature check logic and stage hotfix.",
+        "POST-MORTEM: Implement integration tests for Stripe payload handlers in CI pipeline."
+    ]
+}
+
+_MOCK_BOARD_BRIEFING = {
+    "business_summary": "An active payment processing degradation is currently risking approximately $42,000 in daily transaction revenue. Contractual SLAs are currently breached for three Enterprise-tier customers, presenting penalty exposure.",
+    "financial_exposure": {
+        "daily_mrr_at_risk": "$42,000.00",
+        "sla_penalties_projected": "$15,000.00",
+        "churn_exposure_rate": "8.5%"
+    },
+    "affected_accounts": [
+        "Acme Corp - Enterprise Tier SLA breached",
+        "Globex Ltd - Premium Tier payment declines"
+    ],
+    "mitigation_steps": [
+        "IMMEDIATE: CS directors alert Acme Corp and Globex account leads of payment routing slowness.",
+        "IMMEDIATE: Trigger manual invoice override for billing renewals processing during this window.",
+        "HIGH: Temporarily divert non-critical premium traffic to secondary payment gateways.",
+        "LONG-TERM: Establish multi-processor routing redundancy in our customer billing contracts."
+    ]
+}
+
+_MOCK_CUSTOMER_UPDATE = {
+    "headline": "Service Degradation: Checkout Payments Routing Delay",
+    "status_message": "We are currently experiencing payment routing delays that may cause transaction declines at checkout. Our engineering teams are actively resolving the issue, and we apologize for any inconvenience caused.",
+    "recommended_customer_actions": [
+        "Please wait 10-15 minutes before retrying transaction checkouts.",
+        "If your purchase is urgent, please contact your account manager for manual billing support."
+    ],
+    "estimated_resolution": "under 15 minutes"
+}
+
+
 class AIProviderClient:
-    """Unified AI client that auto-selects the configured provider."""
+    """Unified AI client that auto-selects the configured provider with automatic fallback."""
 
     def __init__(self) -> None:
         self._settings = get_settings()
@@ -68,17 +113,40 @@ class AIProviderClient:
         """
         Send a prompt to the active provider and return the response string.
         Expects the model to return valid JSON.
+        Implements automatic rate-limit and API error fallback.
         """
-        logger.info("AI generate called", extra={"provider": self._provider})
+        # Determine the priority list of providers
+        providers = [self._provider]
+        all_providers = ["gemini", "groq", "openrouter", "mock"]
+        for p in all_providers:
+            if p not in providers:
+                providers.append(p)
 
-        if self._provider == "gemini":
-            return await self._call_gemini(prompt, system)
-        if self._provider == "groq":
-            return await self._call_groq(prompt, system)
-        if self._provider == "openrouter":
-            return await self._call_openrouter(prompt, system)
+        last_error = None
+        for p in providers:
+            try:
+                logger.info(f"AI generate attempting provider: {p}")
+                if p == "gemini":
+                    if not self._settings.GEMINI_API_KEY:
+                        raise ValueError("Gemini API key missing")
+                    return await self._call_gemini(prompt, system)
+                elif p == "groq":
+                    if not self._settings.GROQ_API_KEY:
+                        raise ValueError("Groq API key missing")
+                    return await self._call_groq(prompt, system)
+                elif p == "openrouter":
+                    if not self._settings.OPENROUTER_API_KEY:
+                        raise ValueError("OpenRouter API key missing")
+                    return await self._call_openrouter(prompt, system)
+                elif p == "mock":
+                    return self._mock_response(prompt)
+            except Exception as e:
+                logger.warning(
+                    f"AI provider {p} failed. Attempting next fallback.",
+                    exc_info=e
+                )
+                last_error = e
 
-        # Default / mock
         return self._mock_response(prompt)
 
     @property
@@ -164,9 +232,17 @@ class AIProviderClient:
     # ── Mock ───────────────────────────────────────────────────────────────
 
     def _mock_response(self, prompt: str) -> str:
-        """Return a realistic deterministic mock JSON response."""
-        # Detect prompt type by keywords
+        """Return a realistic deterministic mock JSON response matching prompt keywords."""
         prompt_lower = prompt.lower()
+        
+        # Check specific roles first
+        if "cto" in prompt_lower:
+            return json.dumps(_MOCK_CTO_SUMMARY)
+        if "board" in prompt_lower:
+            return json.dumps(_MOCK_BOARD_BRIEFING)
+        if "customer" in prompt_lower:
+            return json.dumps(_MOCK_CUSTOMER_UPDATE)
+            
         if "executive" in prompt_lower or "summary" in prompt_lower:
             return json.dumps(_MOCK_EXECUTIVE_SUMMARY)
 
@@ -197,7 +273,6 @@ class AIProviderClient:
                 ]
             })
 
-        # Generic fallback
         return json.dumps({
             "result": "Mock AI response — configure GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY for real AI.",
             "timestamp": datetime.now(tz=timezone.utc).isoformat(),

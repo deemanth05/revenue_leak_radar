@@ -24,3 +24,9 @@ class ExecutiveSummaryResponse(BaseModel):
     operational_status: Literal["healthy", "degraded", "critical", "down"]
     total_revenue_at_risk_daily: Decimal
     total_incidents_active: int = 1
+
+
+class RoleBriefingRequest(BaseModel):
+    incident_ids: list[uuid.UUID] = Field(..., min_length=1)
+    role: Literal["cto", "board", "customer"] = "cto"
+
