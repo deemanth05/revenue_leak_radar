@@ -248,4 +248,4 @@ pnpm typecheck         # TypeScript type check
 
 ## License
 
-MIT — Built for the Revenue Leak Radar hackathon.
+MIT License

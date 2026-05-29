@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -34,8 +34,17 @@ interface PageProps {
 }
 
 export default function IncidentWarRoomPage({ params }: PageProps) {
-  const { id: incidentId } = use(params);
+  const [incidentId, setIncidentId] = useState<string>('');
   const router = useRouter();
+
+  // Resolve params asynchronously to prevent component suspension crashes
+  useEffect(() => {
+    Promise.resolve(params).then((resolved) => {
+      if (resolved && resolved.id) {
+        setIncidentId(resolved.id);
+      }
+    });
+  }, [params]);
 
   // State
   const [incident, setIncident] = useState<Incident | null>(null);
@@ -56,6 +65,7 @@ export default function IncidentWarRoomPage({ params }: PageProps) {
 
   // Load initial data
   useEffect(() => {
+    if (!incidentId) return;
     let active = true;
 
     async function loadData() {
