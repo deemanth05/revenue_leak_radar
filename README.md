@@ -23,85 +23,103 @@ It answers: *"Which technical incident is causing the highest business damage ri
 
 ---
 
-## Quick Start
+## Quick Start & Deployments
 
-### Prerequisites
+### Production Deployments
+* **Next.js Frontend:** Deployed on **Vercel**
+* **FastAPI Backend:** Deployed on **Render** (e.g., `https://revenue-leak-radar.onrender.com`)
+* **Database Layer:** Hosted on **Supabase** (PostgreSQL)
 
+---
+
+### Production Configuration & Environment Variables
+
+#### 1. Backend Service (Render)
+Ensure the following variables are configured in your Render service environment:
+* `DATABASE_URL`: Your Supabase pooler connection URI. (e.g., `postgresql://postgres:password@db-host:5432/postgres?sslmode=require`)
+* `ALLOWED_ORIGINS`: A valid JSON array string containing allowed origins. To allow all origins (including Vercel), use:
+  ```env
+  ALLOWED_ORIGINS=["*"]
+  ```
+  *(Note: It must be a valid JSON array. A plain string like `*` will crash the Pydantic parser on startup).*
+* `AI_MOCK_MODE`: `true` (unless you are using a real Gemini/Groq API key).
+
+#### 2. Frontend Service (Vercel)
+Ensure the following variable is configured in Vercel project settings:
+* `NEXT_PUBLIC_API_URL`: `https://revenue-leak-radar.onrender.com` *(your live Render backend URL, starting with HTTPS)*
+
+---
+
+### Seeding the Live Supabase Database
+Because local backend servers and AI sandboxes cannot connect to external databases, you must run the database seeding locally to populate your remote Supabase instance:
+
+**On PowerShell:**
+```powershell
+$env:DATABASE_URL="postgresql://postgres:your-password@db.supabase.co:5432/postgres?sslmode=require"
+pnpm seed
+```
+
+**On Command Prompt (cmd):**
+```cmd
+set DATABASE_URL=postgresql://postgres:your-password@db.supabase.co:5432/postgres?sslmode=require
+pnpm seed
+```
+
+---
+
+### Local Development Setup
+
+#### Prerequisites
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Node.js | 20+ | Frontend runtime |
 | Python | 3.11+ | Backend runtime |
-| Docker | Any | PostgreSQL + Redis |
+| Docker | Any | PostgreSQL + Redis (Optional) |
 | pnpm | 9+ | Package manager |
 
-### 1. Clone & configure
-
+#### 1. Clone & Configure
 ```bash
 git clone <repo>
 cd revenue_leak_radar
-
-# Copy and fill environment variables
 copy .env.example .env
-# Edit .env — add at least one AI provider key (or set AI_MOCK_MODE=true)
+# Edit .env and configure local PostgreSQL / Redis details
 ```
 
-### 2. Start infrastructure
-
+#### 2. Install Dependencies & Build
 ```bash
-# Start PostgreSQL + Redis via Docker
-docker-compose up -d
-
-# Verify everything is running
-docker-compose ps
-```
-
-### 3. Install dependencies
-
-```bash
-# Install frontend deps
 pnpm install
 
-# Install backend deps (Windows)
-cd apps\backend
+# Set up backend virtual environment
+cd apps/backend
 python -m venv .venv
-.venv\Scripts\activate
+.venv/Scripts/activate
 pip install -r requirements.txt
-cd ..\..
+cd ../..
 ```
 
-### 4. Initialize database
-
+#### 3. Initialize & Seed Local Database
+Ensure your local PostgreSQL/Docker is running:
 ```bash
 # Run migrations
-cd apps\backend
-alembic upgrade head
+pnpm migrate
 
-# Seed demo data (the $42k/day checkout failure scenario)
-python -m seed.demo_scenario
-cd ..\..
+# Seed local demo data
+pnpm seed
 ```
 
-### 5. Start development servers
+#### 4. Run Development Servers
+* **Terminal 1 — Frontend:**
+  ```bash
+  pnpm dev:frontend # Open http://localhost:3000
+  ```
+* **Terminal 2 — Backend:**
+  ```bash
+  pnpm dev:backend # Open http://localhost:8000/docs
+  ```
 
-**Terminal 1 — Frontend:**
+#### 5. Validate Environment
 ```bash
-pnpm dev:frontend
-# → http://localhost:3000
-```
-
-**Terminal 2 — Backend:**
-```bash
-cd apps\backend
-.venv\Scripts\activate
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-# → http://localhost:8000
-# → http://localhost:8000/docs (Swagger UI)
-```
-
-### 6. Validate environment
-
-```bash
-python scripts\validate_env.py
+python scripts/validate_env.py
 ```
 
 ---
