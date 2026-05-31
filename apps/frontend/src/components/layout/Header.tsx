@@ -34,6 +34,8 @@ export function Header() {
   const [alertCount] = useState(3);
   const [refreshing, setRefreshing] = useState(false);
   const [utcTime, setUtcTime] = useState('');
+  const [incidentCount, setIncidentCount] = useState(3);
+  const [revenueAtRisk, setRevenueAtRisk] = useState(54200);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -47,6 +49,27 @@ export function Header() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const fetchKpis = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/v1/incidents/dashboard/kpis`);
+        if (!res.ok) throw new Error('API error');
+        const data = await res.json();
+        setIncidentCount(data.active_incidents ?? 3);
+        setRevenueAtRisk(data.total_revenue_at_risk_daily ?? 54200);
+      } catch {
+        // Fallback to demo-stable defaults
+        setIncidentCount(3);
+        setRevenueAtRisk(54200);
+      }
+    };
+    fetchKpis();
+    // Poll every 5s to keep header in sync with resets / resolutions
+    const interval = setInterval(fetchKpis, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleRefresh = () => {
@@ -92,23 +115,45 @@ export function Header() {
         <div className="flex-1" />
 
         {/* SLA risk indicator */}
-        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning-muted border border-warning/20 text-xs text-warning font-medium">
-          <Clock className="w-3 h-3" />
-          <span>3h 42m to SLA breach</span>
-        </div>
+        {incidentCount > 0 ? (
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning-muted border border-warning/20 text-xs text-warning font-medium">
+            <Clock className="w-3 h-3" />
+            <span>3h 42m to SLA breach</span>
+          </div>
+        ) : (
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success-muted border border-success/20 text-xs text-success font-medium">
+            <Clock className="w-3 h-3" />
+            <span>All SLAs Nominal</span>
+          </div>
+        )}
 
         {/* System status pill */}
         <div
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-danger-muted border border-danger/30 text-xs text-danger font-medium"
-          style={{ boxShadow: '0 0 8px rgba(239,68,68,0.2)' }}
+          className={cn(
+            "hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
+            incidentCount > 0
+              ? "bg-danger-muted border border-danger/30 text-danger"
+              : "bg-success-muted border border-success/30 text-success"
+          )}
+          style={{
+            boxShadow: incidentCount > 0
+              ? '0 0 8px rgba(239,68,68,0.2)'
+              : '0 0 8px rgba(34,197,94,0.1)'
+          }}
         >
-          <span className="status-dot-active" />
-          3 Active Incidents
+          <span className={cn(
+            "w-1.5 h-1.5 rounded-full",
+            incidentCount > 0 ? "bg-danger animate-pulse" : "bg-success"
+          )} />
+          <span>{incidentCount} Active Incident{incidentCount !== 1 ? 's' : ''}</span>
         </div>
 
         {/* Revenue at risk pill */}
         <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-surface-border text-xs text-text-secondary">
-          <span className="text-danger font-bold tabular-nums">$54.2k</span>
+          <span className={cn(
+            "font-bold tabular-nums",
+            revenueAtRisk > 0 ? "text-danger" : "text-success"
+          )}>${(revenueAtRisk / 1000).toFixed(1)}k</span>
           <span>/day at risk</span>
         </div>
 
