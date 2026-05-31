@@ -37,8 +37,8 @@ DATABASE_URL = os.environ.get(
 # asyncpg driver required for async; ensure correct prefix
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-elif not DATABASE_URL.startswith("postgresql+asyncpg://"):
-    DATABASE_URL = DATABASE_URL
+if "sslmode=" in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("sslmode=", "ssl=")
 
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
 

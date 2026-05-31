@@ -28,7 +28,9 @@ class Settings(BaseSettings):
     @classmethod
     def _normalize_db_url(cls, v: str) -> str:
         if v.startswith("postgresql://"):
-            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if "sslmode=" in v:
+            v = v.replace("sslmode=", "ssl=")
         return v
 
     REDIS_URL: str = Field(default="redis://localhost:6379/0")
