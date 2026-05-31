@@ -13,8 +13,7 @@ import {
   RefreshCw,
   Cpu,
   FastForward,
-  CheckCircle2,
-  HelpCircle
+  CheckCircle2
 } from 'lucide-react';
 import { simulationsApi, timelineApi } from '@/lib/api';
 

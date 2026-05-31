@@ -6,213 +6,334 @@ import {
   Search,
   Play,
   CheckCircle,
-  Terminal,
   Activity,
   GitBranch,
   DollarSign,
   AlertTriangle,
   ArrowRight,
   RefreshCw,
-  Code
+  MessageSquare,
+  Clock,
+  Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function CoralShowcasePage() {
-  const [runningQuery, setRunningQuery] = useState(false);
-  const [queryLog, setQueryLog] = useState<string[]>([]);
-  const [queryDone, setQueryDone] = useState(false);
-  const [apiResult, setApiResult] = useState<Record<string, unknown> | null>(null);
-  const [apiFetching, setApiFetching] = useState(false);
+  const [windowHours, setWindowHours] = useState<number>(24);
+  const [loading, setLoading] = useState(false);
+  const [apiResult, setApiResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [jsonExpanded, setJsonExpanded] = useState(true);
 
-  const fetchCoralData = useCallback(async () => {
-    setApiFetching(true);
+  const runJointQuery = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(
-        `${baseUrl}/api/v1/coral/joint-query?window_hours=24`,
+        `${baseUrl}/api/v1/coral/joint-query?window_hours=${windowHours}`,
         { method: 'POST' }
       );
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      if (!res.ok) {
+        throw new Error(`API returned ${res.status}: ${res.statusText}`);
+      }
       const data = await res.json();
       setApiResult(data);
-    } catch (err) {
-      console.warn('Coral API call failed, using fallback schema:', err);
-      setApiResult(null);
+    } catch (err: any) {
+      console.error('Coral API call failed:', err);
+      setError(err.message || 'Unknown connection error');
     } finally {
-      setApiFetching(false);
+      setLoading(false);
     }
-  }, []);
+  }, [windowHours]);
 
-  const runCoralJoinQuery = () => {
-    setRunningQuery(true);
-    setQueryDone(false);
-    setQueryLog([]);
-
-    const logSteps = [
-      "Initializing Coral connection...",
-      "SELECT * FROM deployments WHERE environment = 'production' AND status = 'success' ORDER BY deployed_at DESC LIMIT 5",
-      "Found culprit candidate: Commit 'abc123f' deployed to 'checkout-service' 95m ago.",
-      "JOIN stripe_payment_failures ON stripe_payment_failures.failed_at BETWEEN deployments.deployed_at AND deployments.deployed_at + 1h",
-      "Matched 89 Stripe billing declines targeting 'standard' and 'premium' account IDs.",
-      "JOIN sentry_error_logs ON sentry_error_logs.service = deployments.repository AND sentry_error_logs.triggered_at >= deployments.deployed_at",
-      "Matched 47 occurrences of Sentry Exception: 'PaymentProcessor.process() raised TimeoutError'.",
-      "JOIN zendesk_support_tickets ON zendesk_support_tickets.customer_id = stripe_payment_failures.customer_id AND zendesk_support_tickets.subject LIKE '%payment%'",
-      "Matched 67 support queue tickets expressing purchase transaction failures.",
-      "Performing temporal alignment on shared window (T+5m to T+60m)...",
-      "Coral joint correlation confidence calculated: 94%",
-      "Aggregating daily MRR risk and mapping SLA impact on 3 enterprise accounts...",
-      "Incident created, indexed and broadcasted to Revenue Leak Radar in 8.42ms!"
-    ];
-
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      if (currentStep < logSteps.length) {
-        setQueryLog(prev => [...prev, logSteps[currentStep]]);
-        currentStep++;
-      } else {
-        clearInterval(interval);
-        setRunningQuery(false);
-        setQueryDone(true);
-        fetchCoralData();
-      }
-    }, 400);
+  const sourceMetadata = {
+    deployments: {
+      name: 'Deployment Pipeline',
+      provider: 'GitHub / CI-CD',
+      icon: GitBranch,
+      colorClass: 'text-primary border-primary/20 bg-primary/10',
+    },
+    payment_failures: {
+      name: 'Payment Gateway',
+      provider: 'Stripe',
+      icon: DollarSign,
+      colorClass: 'text-danger border-danger/20 bg-danger/10',
+    },
+    support_tickets: {
+      name: 'Customer Support Queue',
+      provider: 'Zendesk',
+      icon: MessageSquare,
+      colorClass: 'text-warning border-warning/20 bg-warning/10',
+    },
+    alerts: {
+      name: 'Infrastructure Monitoring',
+      provider: 'Sentry',
+      icon: AlertTriangle,
+      colorClass: 'text-success border-success/20 bg-success/10',
+    },
   };
-
-  const schemaJson = `{
-  "incident_id": "e9b9a36d-6a87-40a2-b168-74a41beee348",
-  "title": "Checkout Service Payment Failure — Deployment abc123f",
-  "started_at": "2026-05-28T07:05:48.000Z",
-  "correlation_confidence": 0.94,
-  "estimated_revenue_impact_daily": 42180.00,
-  "affected_customer_count": 67,
-  "coral_indexes": {
-    "culprit_deployment": {
-      "commit_hash": "abc123f",
-      "repository": "checkout-service",
-      "branch": "main",
-      "deployed_at": "2026-05-28T07:05:48.000Z"
-    },
-    "matched_infrastructure_alerts": [
-      {
-        "source": "sentry",
-        "title": "PaymentProcessor.process() raised TimeoutError",
-        "count": 47,
-        "first_triggered": "2026-05-28T07:10:48.000Z"
-      }
-    ],
-    "matched_payment_failures": {
-      "gateway": "stripe",
-      "failed_intents_count": 89,
-      "failed_amount_total": 36500.00,
-      "reasons": ["processing_error", "timeout"]
-    },
-    "matched_support_tickets": {
-      "source": "zendesk",
-      "ticket_count": 67,
-      "urgent_priority_count": 27
-    }
-  }
-}`;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2.5">
           <Database className="w-6 h-6 text-primary animate-pulse" />
-          Coral Indexer & Log Correlation Hub
+          Coral Intelligence Engine
         </h1>
         <p className="text-sm text-text-muted mt-1">
-          Deep-source queries, joint indexes, and unified schema mappings performed across SRE events and billing records.
+          Cross-source signal correlation powered by the Coral query engine
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Left Column: Coral Join Execution Console */}
-        <div className="card p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-surface-border pb-3">
-            <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-primary" /> Coral Relational Join Query Engine
-            </h3>
-            <button
-              onClick={runCoralJoinQuery}
-              className={cn(
-                "btn-primary py-1.5 px-3 flex items-center gap-2 text-xs",
-                runningQuery ? "opacity-50 pointer-events-none" : ""
-              )}
-            >
-              {runningQuery ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Querying...
-                </>
-              ) : (
-                <>
-                  <Play className="w-3.5 h-3.5 fill-current" /> Run Joint Query
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="bg-black/40 border border-surface-border rounded-lg p-4 font-mono text-xs h-[360px] overflow-y-auto space-y-2 flex flex-col justify-end">
-            {queryLog.length === 0 ? (
-              <div className="text-center py-24 text-text-muted text-xs flex flex-col items-center justify-center gap-3">
-                <Database className="w-8 h-8 opacity-40 animate-pulse text-primary" />
-                <span>Ready to execute joint correlation query in Coral indexer...</span>
-              </div>
-            ) : (
-              <div className="space-y-1.5 flex-1 overflow-y-auto">
-                {queryLog.map((log, index) => {
-                  const isSelect = log.startsWith("SELECT") || log.startsWith("JOIN");
-                  const isSuccess = log.includes("successfully") || log.includes("Incident created");
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        "leading-relaxed",
-                        isSelect
-                          ? "text-primary font-bold"
-                          : isSuccess
-                          ? "text-success font-semibold"
-                          : "text-text-secondary"
-                      )}
-                    >
-                      <span className="text-text-muted select-none mr-2 font-light">{`[${index + 1}]`}</span>
-                      {log}
-                    </div>
-                  );
-                })}
-                {runningQuery && (
-                  <div className="text-primary animate-pulse text-xs mt-1">● executing Coral join engine...</div>
+      {/* Control Panel */}
+      <div className="card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="text-xs font-bold text-text-muted uppercase tracking-wider">Temporal Query Window</div>
+          <div className="flex items-center gap-2">
+            {[6, 12, 24, 48, 72].map((hours) => (
+              <button
+                key={hours}
+                onClick={() => setWindowHours(hours)}
+                className={cn(
+                  "px-2.5 py-1 text-xs rounded border transition-all",
+                  windowHours === hours
+                    ? "bg-primary border-primary text-white font-semibold"
+                    : "bg-surface border-surface-border text-text-muted hover:border-text-muted/30"
                 )}
-              </div>
-            )}
+              >
+                {hours}h
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Right Column: Unified Correlated Incident Schema */}
-        <div className="card p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-surface-border pb-3">
-            <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-              <Code className="w-4 h-4 text-warning" /> Coral Unified Incident Schema JSON
-            </h3>
-            <span className="px-1.5 py-0.5 rounded text-3xs font-mono font-semibold bg-warning-muted text-warning border border-warning/20">
-              CONTRACT DTO
-            </span>
-          </div>
+        <button
+          onClick={runJointQuery}
+          disabled={loading}
+          className={cn(
+            "btn-primary py-2 px-4 flex items-center gap-2 text-sm font-semibold",
+            loading ? "opacity-50 pointer-events-none" : ""
+          )}
+        >
+          {loading ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin" /> Executing Correlation Joint-Query...
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4 fill-current" /> Run Joint Query
+            </>
+          )}
+        </button>
+      </div>
 
-          <div className="bg-black/40 border border-surface-border rounded-lg p-4 font-mono text-2xs h-[360px] overflow-y-auto overflow-x-hidden text-text-secondary leading-relaxed">
-            {apiFetching ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-primary animate-pulse text-xs">● Fetching live data from Coral API...</div>
+      {/* Main Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left 2 Columns: Query Performance and Insights */}
+        <div className="lg:col-span-2 space-y-6">
+          {apiResult ? (
+            <div className="card p-5 space-y-6">
+              {/* Execution Info */}
+              <div className="flex flex-wrap items-center justify-between border-b border-surface-border pb-4 gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                    <CheckCircle className="w-4.5 h-4.5 text-success" /> Query Execution Success
+                  </h3>
+                  <div className="text-2xs text-text-muted mt-0.5">
+                    Verified Coral metadata contract response
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 text-2xs font-mono text-text-muted">
+                  <div className="px-2 py-1 rounded bg-surface border border-surface-border">
+                    Engine: <span className="text-text-primary font-bold">{apiResult.query_engine}</span>
+                  </div>
+                  <div className="px-2 py-1 rounded bg-surface border border-surface-border">
+                    Duration: <span className="text-primary font-bold">{apiResult.query_duration_ms} ms</span>
+                  </div>
+                  <div className="px-2 py-1 rounded bg-surface border border-surface-border flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{new Date(apiResult.executed_at).toLocaleTimeString()}</span>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <pre className="whitespace-pre-wrap">
-                {apiResult ? JSON.stringify(apiResult, null, 2) : schemaJson}
-              </pre>
-            )}
+
+              {/* Active Sources Badges */}
+              <div className="space-y-2">
+                <div className="text-2xs font-bold text-text-muted uppercase tracking-wider">Active Signal Sources in Window</div>
+                <div className="flex flex-wrap gap-2">
+                  {apiResult.sources_with_data && apiResult.sources_with_data.length > 0 ? (
+                    apiResult.sources_with_data.map((srcId: string) => {
+                      const meta = (sourceMetadata as any)[srcId] || { name: srcId, icon: Database, colorClass: 'bg-surface border-surface-border text-text-muted' };
+                      const Icon = meta.icon;
+                      return (
+                        <div
+                          key={srcId}
+                          className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-semibold", meta.colorClass)}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          <span>{meta.name}</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-xs text-text-muted italic">No sources returned active signals in this time window.</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Correlation Summary */}
+              <div className="p-4 rounded-lg bg-surface border border-surface-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-primary" />
+                    Joint Correlation Recommendation
+                  </div>
+                  <span className={cn(
+                    "text-xs font-mono font-bold px-2 py-0.5 rounded border",
+                    apiResult.correlation_summary.confidence >= 0.8
+                      ? "bg-danger-muted/30 text-danger border-danger/20"
+                      : apiResult.correlation_summary.confidence >= 0.5
+                      ? "bg-warning-muted/30 text-warning border-warning/20"
+                      : "bg-primary-muted/30 text-primary border-primary/20"
+                  )}>
+                    {Math.round(apiResult.correlation_summary.confidence * 100)}% Confidence
+                  </span>
+                </div>
+
+                <div className="text-lg font-bold text-text-primary leading-snug">
+                  {apiResult.correlation_summary.recommendation}
+                </div>
+
+                <div className="text-xs text-text-secondary leading-relaxed">
+                  Coral joined and indexed {apiResult.correlation_summary.total_signals} total signals across deployments, billing declines, exception trackers, and client complaint tickets.
+                </div>
+              </div>
+
+              {/* Signal breakdown cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                {[
+                  { label: 'Deployments', count: apiResult.signal_counts.deployments, color: 'text-primary' },
+                  { label: 'Payment Failures', count: apiResult.signal_counts.payment_failures, color: 'text-danger' },
+                  { label: 'Support Tickets', count: apiResult.signal_counts.support_tickets, color: 'text-warning' },
+                  { label: 'Sentry Alerts', count: apiResult.signal_counts.alerts, color: 'text-success' },
+                ].map((item, idx) => (
+                  <div key={idx} className="p-3 bg-black/20 border border-surface-border rounded-lg">
+                    <div className={cn("text-xl font-bold font-mono leading-none", item.color)}>
+                      {item.count}
+                    </div>
+                    <div className="text-3xs text-text-muted uppercase tracking-wider mt-1.5">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="card p-8 flex flex-col items-center justify-center text-center gap-4 min-h-[350px]">
+              <Database className="w-12 h-12 text-text-muted/30 animate-pulse" />
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-text-primary">Coral Engine Standby</h3>
+                <p className="text-xs text-text-muted max-w-sm">
+                  Click 'Run Joint Query' to execute a live SQL relational join over recent telemetry events and billing records.
+                </p>
+              </div>
+              {error && (
+                <div className="mt-2 text-xs text-danger bg-danger-muted/10 border border-danger/20 rounded p-2.5 max-w-md font-mono">
+                  {error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Raw Contract Output JSON */}
+          {apiResult && (
+            <div className="card p-5 space-y-3">
+              <div className="flex items-center justify-between border-b border-surface-border pb-3">
+                <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">
+                  Raw Query Contract Payload
+                </h4>
+                <button
+                  onClick={() => setJsonExpanded(!jsonExpanded)}
+                  className="text-2xs text-primary hover:underline"
+                >
+                  {jsonExpanded ? 'Hide Payload' : 'Show Payload'}
+                </button>
+              </div>
+
+              {jsonExpanded && (
+                <div className="bg-black/40 border border-surface-border rounded-lg p-4 font-mono text-2xs max-h-[300px] overflow-y-auto text-text-secondary leading-relaxed">
+                  <pre className="whitespace-pre-wrap">{JSON.stringify(apiResult, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Coral Data Sources */}
+        <div className="space-y-6">
+          <div className="card p-5 space-y-4">
+            <div className="border-b border-surface-border pb-3">
+              <h3 className="text-sm font-semibold text-text-primary">
+                Coral Data Sources
+              </h3>
+              <p className="text-2xs text-text-muted mt-0.5">
+                Active connections querying across distributed namespaces
+              </p>
+            </div>
+
+            <div className="space-y-3.5">
+              {[
+                {
+                  name: 'Deployment Pipeline',
+                  provider: 'GitHub Actions',
+                  desc: 'Ingests production build triggers, commit IDs, and authors.',
+                  icon: GitBranch,
+                  color: 'text-primary border-primary/20 bg-primary/5',
+                },
+                {
+                  name: 'Payment Gateway',
+                  provider: 'Stripe API v3',
+                  desc: 'Ledger declination events, invoice failure reason strings.',
+                  icon: DollarSign,
+                  color: 'text-danger border-danger/20 bg-danger/5',
+                },
+                {
+                  name: 'Customer Support',
+                  provider: 'Zendesk Tickets',
+                  desc: 'Support escalations, category keywords, queue priority tags.',
+                  icon: MessageSquare,
+                  color: 'text-warning border-warning/20 bg-warning/5',
+                },
+                {
+                  name: 'Infrastructure Alerts',
+                  provider: 'Sentry Exceptions',
+                  desc: 'Exceptions spikes, server crash logs, core service timeouts.',
+                  icon: AlertTriangle,
+                  color: 'text-success border-success/20 bg-success/5',
+                },
+              ].map((src, idx) => {
+                const Icon = src.icon;
+                return (
+                  <div key={idx} className={cn("p-3 rounded-lg border flex gap-3 items-start", src.color)}>
+                    <div className="p-1.5 rounded bg-surface border border-surface-border mt-0.5">
+                      <Icon className="w-4 h-4 text-text-secondary" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-text-primary">{src.name}</span>
+                        <span className="text-4xs px-1 rounded bg-black/35 text-text-muted uppercase tracking-widest">{src.provider}</span>
+                      </div>
+                      <p className="text-3xs text-text-secondary leading-normal">{src.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );

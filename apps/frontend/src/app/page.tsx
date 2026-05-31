@@ -57,7 +57,7 @@ export default function ProductLandingPage() {
       {/* Hero Section */}
       <section className="w-full max-w-5xl mx-auto px-6 pt-20 pb-16 text-center space-y-6 z-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-2xs font-semibold uppercase tracking-wider animate-pulse">
-          <Sparkles className="w-3 h-3" /> YC Hackathon Submission
+          <Sparkles className="w-3 h-3" /> AI-Powered Revenue Intelligence
         </div>
 
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-tight">

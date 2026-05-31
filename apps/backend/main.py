@@ -141,6 +141,7 @@ app.include_router(simulations_router, prefix=API_PREFIX)
 app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(integrations_router, prefix=API_PREFIX)
 app.include_router(coral_router, prefix=API_PREFIX)
+app.include_router(health_router, prefix=API_PREFIX)
 
 
 

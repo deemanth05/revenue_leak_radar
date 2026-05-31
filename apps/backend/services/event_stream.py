@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from core.database import get_db
+from schemas.operational_event import OperationalEventCreate
 from services.event_ingestion import ingest_operational_event
 
 logger = logging.getLogger(__name__)
@@ -15,6 +17,21 @@ logger = logging.getLogger(__name__)
 # Memory-backed async queue for event streaming pipeline
 _EVENT_QUEUE: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
 _WORKER_TASK: asyncio.Task | None = None
+
+# Webhook event_type strings → OperationalEventType enum values
+_EVENT_TYPE_MAP: dict[str, str] = {
+    "deployment_created": "deployment",
+    "deployment": "deployment",
+    "error_spike_detected": "error_spike",
+    "error_spike": "error_spike",
+    "payment_failures_increased": "payment_failure",
+    "payment_failure": "payment_failure",
+    "infrastructure_alert": "infrastructure_alert",
+    "support_ticket": "support_ticket",
+    "customer_complaint": "customer_complaint",
+    "sla_violation": "sla_violation",
+    "remediation_action": "remediation_action",
+}
 
 async def publish_event(event_payload: dict[str, Any]) -> None:
     """Publish an ingested webhook operational event to the streaming queue."""
@@ -28,11 +45,35 @@ async def _stream_worker() -> None:
         try:
             event = await _EVENT_QUEUE.get()
             logger.info(f"Worker dequeued event: {event.get('event_type')}")
-            
+
+            # Normalize event_type from webhook string to valid enum value
+            raw_type = event.get("event_type", "")
+            normalized_type = _EVENT_TYPE_MAP.get(raw_type, raw_type)
+            event["event_type"] = normalized_type
+
+            # Ensure required fields have defaults
+            if "timestamp" not in event or event["timestamp"] is None:
+                event["timestamp"] = datetime.now(timezone.utc).isoformat()
+            if "affected_customers" not in event:
+                event["affected_customers"] = []
+            if "business_context" not in event:
+                event["business_context"] = {}
+
+            # Convert raw dict → Pydantic schema (validates all fields)
+            try:
+                event_schema = OperationalEventCreate(**event)
+            except Exception as validation_err:
+                logger.error(
+                    f"Event validation failed for type '{raw_type}': {validation_err}",
+                    exc_info=True,
+                )
+                _EVENT_QUEUE.task_done()
+                continue
+
             # Open DB session and run ingestion engine
             async for db in get_db():
                 try:
-                    await ingest_operational_event(db, event)
+                    await ingest_operational_event(db, event_schema)
                     await db.commit()
                 except Exception as ex:
                     logger.error(f"Ingestion worker failed to process event: {ex}", exc_info=True)

@@ -5,7 +5,7 @@ import { RevenueImpactChart } from '@/components/charts/RevenueImpactChart';
 import { SeverityBarChart } from '@/components/charts/SeverityBarChart';
 import { OperationalStatusBar } from '@/components/dashboard/OperationalStatusBar';
 import { CorrelationFlowGraph } from '@/components/charts/CorrelationFlowGraph';
-import { AlertBanner } from '@/components/ui/AlertBanner';
+
 import { incidentsApi, deploymentsApi, getMockIncidents, getMockDashboardKpis } from '@/lib/api';
 import { formatRevenue, formatNumber, formatDuration, formatRelativeTime, shortHash } from '@/lib/utils';
 import type { Incident, DashboardKpis, Deployment } from '@rlr/schemas';
@@ -298,6 +298,7 @@ export default async function DashboardPage() {
               <span className="text-2xs px-1.5 py-0.5 rounded bg-primary-muted text-primary border border-primary/20 font-semibold">
                 DETERMINISTIC
               </span>
+              <span className="text-2xs px-1.5 py-0.5 rounded bg-surface border border-surface-border text-text-muted font-semibold">Powered by Coral</span>
             </div>
           </div>
           <div className="space-y-3">

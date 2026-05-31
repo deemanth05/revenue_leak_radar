@@ -15,6 +15,7 @@ import {
   Award,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { simulationsApi } from '@/lib/api';
 
 const DEMO_STEPS = [
   {
@@ -33,9 +34,9 @@ const DEMO_STEPS = [
     step: 2,
     title: 'Correlate Signals',
     description:
-      'The Coral engine cross-references deployment logs, payment failures, support tickets, and error spikes.',
+      'The Coral intelligence engine runs cross-source SQL joins over deployment logs, payment failures, support tickets, and exception alerts.',
     href: '/coral',
-    cta: 'View Correlation',
+    cta: 'View Coral Correlation',
     icon: Database,
     color: 'text-primary',
     bgColor: 'bg-primary-muted/10',
@@ -114,9 +115,7 @@ export default function JudgeModePage() {
     setResetting(true);
     setResetDone(false);
     try {
-      await fetch('http://localhost:8000/api/v1/simulations/reset', {
-        method: 'POST',
-      });
+      await simulationsApi.reset();
       setResetDone(true);
     } catch (err) {
       console.warn('Reset simulation failed:', err);
@@ -169,8 +168,8 @@ export default function JudgeModePage() {
                 resetting
                   ? 'border-surface-border text-text-muted opacity-50'
                   : resetDone
-                  ? 'border-success/30 text-success bg-success-muted/10'
-                  : 'border-surface-border text-text-secondary hover:text-text-primary hover:border-text-muted'
+                    ? 'border-success/30 text-success bg-success-muted/10'
+                    : 'border-surface-border text-text-secondary hover:text-text-primary hover:border-text-muted'
               )}
             >
               {resetting ? (

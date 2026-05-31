@@ -18,7 +18,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { incidentsApi, getMockIncidents } from '@/lib/api';
-import { formatRevenueDaily, formatConfidence, formatRelativeTime, shortHash } from '@/lib/utils';
+import { formatRevenueDaily, formatRelativeTime, shortHash } from '@/lib/utils';
 import { CorrelationFlowGraph } from '@/components/charts/CorrelationFlowGraph';
 import type { Incident } from '@rlr/schemas';
 import Link from 'next/link';
@@ -129,7 +129,8 @@ export default function CorrelationPage() {
           </div>
           <h1 className="text-2xl font-bold text-text-primary mt-1 flex items-center gap-2.5">
             <Network className="w-6 h-6 text-primary" />
-            Deterministic Correlation Engine
+            <span>Deterministic Correlation Engine</span>
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-surface border border-surface-border text-text-muted font-semibold">Coral-Powered</span>
           </h1>
           <p className="text-sm text-text-muted mt-1">
             Real-time causal linkage mapping between deployment triggers, application exceptions, gateway declines, and revenue loss.

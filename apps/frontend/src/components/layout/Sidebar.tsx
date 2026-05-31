@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -20,9 +21,34 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+function useSidebarData() {
+  const [incidentCount, setIncidentCount] = useState(3);
+  const [revenueAtRisk, setRevenueAtRisk] = useState(54200);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/v1/incidents/dashboard/kpis`);
+        if (!res.ok) throw new Error('API error');
+        const data = await res.json();
+        setIncidentCount(data.active_incidents ?? 3);
+        setRevenueAtRisk(data.total_revenue_at_risk_daily ?? 54200);
+      } catch {
+        // Fallback to demo-stable defaults
+        setIncidentCount(3);
+        setRevenueAtRisk(54200);
+      }
+    };
+    fetchData();
+  }, []);
+
+  return { incidentCount, revenueAtRisk };
+}
+
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3, id: 'nav-dashboard' },
-  { href: '/incidents', label: 'Incidents', icon: AlertTriangle, id: 'nav-incidents', badge: 3, badgeCritical: true },
+  { href: '/incidents', label: 'Incidents', icon: AlertTriangle, id: 'nav-incidents', badge: true, badgeCritical: true },
   { href: '/revenue-risk', label: 'Revenue Risk', icon: Activity, id: 'nav-revenue' },
   { href: '/executive-reports', label: 'Executive Reports', icon: FileText, id: 'nav-executive' },
   { href: '/timeline', label: 'Timeline', icon: Clock, id: 'nav-timeline' },
@@ -35,6 +61,7 @@ const BOTTOM_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { incidentCount, revenueAtRisk } = useSidebarData();
 
   return (
     <aside
@@ -54,9 +81,9 @@ export function Sidebar() {
           {/* Critical incident count badge */}
           <div
             className="flex items-center justify-center w-5 h-5 rounded-full bg-danger text-white text-2xs font-bold animate-pulse"
-            title="3 active critical incidents"
+            title={`${incidentCount} active critical incidents`}
           >
-            3
+            {incidentCount}
           </div>
         </div>
       </div>
@@ -84,7 +111,7 @@ export function Sidebar() {
                         ? 'bg-danger text-white animate-pulse'
                         : 'bg-surface-elevated text-text-secondary border border-surface-border'
                     )}>
-                      {item.badge}
+                      {item.href === '/incidents' ? incidentCount : item.badge}
                     </span>
                   )}
                 </Link>
@@ -185,7 +212,7 @@ export function Sidebar() {
         {/* Revenue at Risk quick metric */}
         <div className="mt-2 px-3 py-2 rounded bg-danger-muted/40 border border-danger/20">
           <div className="text-2xs text-text-muted">Revenue at Risk</div>
-          <div className="text-sm font-bold text-danger tabular-nums mt-0.5">$54.2k/day</div>
+          <div className="text-sm font-bold text-danger tabular-nums mt-0.5">${(revenueAtRisk / 1000).toFixed(1)}k/day</div>
         </div>
 
         {/* Environment + system health indicator */}

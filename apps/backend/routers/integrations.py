@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hmac
 import hashlib
+from datetime import datetime, timezone
 from typing import Any
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel
@@ -39,16 +40,21 @@ class StripeWebhookPayload(BaseModel):
 @router.post("/github/webhook", summary="Github Deployment Ingestion Webhook")
 async def github_webhook(payload: GithubWebhookPayload) -> dict[str, str]:
     """Ingest production deployments dynamically from Github hooks."""
-    event_data = {
-        "event_type": "deployment_created",
+    event_data: dict[str, Any] = {
+        "event_type": "deployment",
         "source_system": "github",
         "service": payload.repository,
         "severity": "info",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "affected_customers": [],
+        "business_context": {},
         "correlation_metadata": {
             "commit_hash": payload.commit_hash,
             "branch": payload.branch,
             "author": payload.author,
             "repository": payload.repository,
+            "environment": "production",
+            "status": "success",
         }
     }
     await publish_event(event_data)
@@ -57,11 +63,14 @@ async def github_webhook(payload: GithubWebhookPayload) -> dict[str, str]:
 @router.post("/sentry/webhook", summary="Sentry Alert Exception Webhook")
 async def sentry_webhook(payload: SentryWebhookPayload) -> dict[str, str]:
     """Ingest exception and crash signals from Sentry monitoring hooks."""
-    event_data = {
-        "event_type": "error_spike_detected",
+    event_data: dict[str, Any] = {
+        "event_type": "error_spike",
         "source_system": "sentry",
         "service": payload.service,
         "severity": payload.severity,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "affected_customers": [],
+        "business_context": {},
         "correlation_metadata": {
             "title": payload.title,
             "message": payload.message,
@@ -85,11 +94,16 @@ async def stripe_webhook(
             detail="Stripe-Signature validation failed: Invalid layout format"
         )
         
-    event_data = {
-        "event_type": "payment_failures_increased",
+    event_data: dict[str, Any] = {
+        "event_type": "payment_failure",
         "source_system": "stripe",
         "service": "stripe-gateway",
         "severity": "high",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "affected_customers": [payload.customer_id],
+        "business_context": {
+            "revenue_impact": payload.amount,
+        },
         "correlation_metadata": {
             "customer_id": payload.customer_id,
             "amount": payload.amount,

@@ -411,7 +411,7 @@ export default function IncidentWarRoomPage({ params }: PageProps) {
               )}
             </div>
             <p className="text-xs text-text-muted mt-0.5">
-              Incident ID: <span className="font-mono text-2xs uppercase">{incident?.id}</span> · Source: <span className="capitalize">{incident?.source.replace('_', ' ')}</span>
+              Incident ID: <span className="font-mono text-2xs uppercase">{incident?.id}</span> · Source: <span className="capitalize">{incident?.source?.replace('_', ' ') || ''}</span>
             </p>
           </div>
         </div>
@@ -722,7 +722,7 @@ export default function IncidentWarRoomPage({ params }: PageProps) {
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-text-primary">{sim.title}</h4>
                     <span className="px-1.5 py-0.5 rounded text-3xs font-mono font-bold bg-success-muted text-success border border-success/20">
-                      {(sim.similarity_score * 100).toFixed(0)}% MATCH
+                      {((sim.similarity_score || 0) * 100).toFixed(0)}% MATCH
                     </span>
                   </div>
                   <p className="text-2xs text-text-muted mt-1 leading-normal">

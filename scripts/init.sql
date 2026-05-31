@@ -1,5 +1,5 @@
-# Revenue Leak Radar — PostgreSQL Init Script
-# Runs automatically when the PostgreSQL Docker container first starts
+-- Revenue Leak Radar — PostgreSQL Init Script
+-- Runs automatically when the PostgreSQL Docker container first starts
 
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

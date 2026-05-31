@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # Revenue Leak Radar — Demo Startup Script
 # =============================================================================
 
@@ -39,11 +39,13 @@ function Check-PortAvailability {
                 docker stop $dockerContainer | Out-Null
                 Write-Host "  [OK] Stopped container $dockerContainer." -ForegroundColor Green
                 Start-Sleep -Seconds 1
-            } else {
+            }
+            else {
                 Write-Error "Port $Port must be free. Aborting."
                 Exit 1
             }
-        } else {
+        }
+        else {
             Write-Host "  ⚠ Port $Port ($ServiceName) is already in use." -ForegroundColor Red
             Write-Host "  It is occupied by a local process with PID $($connection[0].OwningProcess)." -ForegroundColor Red
             $response = Read-Host "  Kill the process? (y/N)"
@@ -51,7 +53,8 @@ function Check-PortAvailability {
                 Stop-Process -Id $connection[0].OwningProcess -Force -ErrorAction SilentlyContinue
                 Write-Host "  [OK] Killed process on port $Port." -ForegroundColor Green
                 Start-Sleep -Seconds 1
-            } else {
+            }
+            else {
                 Write-Error "Port $Port must be free. Aborting."
                 Exit 1
             }
@@ -99,7 +102,8 @@ foreach ($containerName in $containerNames) {
         $result = docker exec $containerName pg_isready -U rlr_user -d revenue_leak_radar 2>&1
         if ($LASTEXITCODE -eq 0) {
             $pgReady = $true
-        } else {
+        }
+        else {
             Write-Host "  Attempt $retryCount/$maxRetries — waiting for Postgres in $containerName..." -ForegroundColor DarkYellow
             Start-Sleep -Seconds 1
         }
@@ -109,7 +113,8 @@ foreach ($containerName in $containerNames) {
 if (-not $pgReady) {
     Write-Warning "Could not confirm PostgreSQL readiness via pg_isready. Proceeding with 5s fallback wait..."
     Start-Sleep -Seconds 5
-} else {
+}
+else {
     Write-Host "[OK] PostgreSQL is accepting connections." -ForegroundColor Green
 }
 Write-Host ""

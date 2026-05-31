@@ -3,10 +3,9 @@
 import React, { useEffect, useState, startTransition } from 'react';
 import { GitCommit, AlertTriangle, CreditCard, MessageSquare, CheckCircle, Zap, Loader2, TrendingDown } from 'lucide-react';
 import { incidentsApi } from '@/lib/api';
-import { formatRevenue, formatDateTime, formatRelativeTime } from '@/lib/utils';
+import { formatDateTime, formatRelativeTime } from '@/lib/utils';
 import type { Incident } from '@rlr/schemas';
 
-type EventType = 'deployment' | 'alert' | 'payment_failure' | 'support_ticket' | 'remediation' | 'executive_alert';
 
 interface TimelineEvent {
   timestamp: string;

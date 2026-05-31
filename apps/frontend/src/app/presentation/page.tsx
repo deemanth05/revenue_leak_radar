@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Play,
   Pause,
@@ -23,7 +22,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { simulationsApi, incidentsApi, timelineApi } from '@/lib/api';
+import { simulationsApi } from '@/lib/api';
 
 interface DemoStep {
   number: number;
@@ -50,7 +49,6 @@ const DEMO_STEPS: DemoStep[] = [
 ];
 
 export default function CinematicPresentationPage() {
-  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState<1 | 2 | 5>(2); // Default 2x speed (1.5s per step)
@@ -74,7 +72,7 @@ export default function CinematicPresentationPage() {
       // Trigger corresponding simulation steps in the background database as we advance!
       // This is beautiful because it synchronizes the actual backend database state with our presentation!
       const targetStep = currentStep + 1;
-      
+
       // Map presentation steps onto backend scenario steps:
       // Presentation Step 1 -> Scenario Step 1 (Deploy Code Change)
       // Presentation Step 2 -> Scenario Step 2 (HTTP 500 alerts)
@@ -89,7 +87,7 @@ export default function CinematicPresentationPage() {
           console.warn("Failed background trigger:", e);
         }
       }
-      
+
       setCurrentStep(targetStep);
     }, intervalTime);
 
@@ -139,7 +137,7 @@ export default function CinematicPresentationPage() {
   const handleManualStep = async (stepIndex: number) => {
     if (isPlaying) setIsPlaying(false);
     setCurrentStep(stepIndex);
-    
+
     // Auto trigger backend simulation steps up to this step
     try {
       await simulationsApi.reset();
@@ -179,7 +177,7 @@ export default function CinematicPresentationPage() {
 
       {/* Main split grid */}
       <div className="flex-1 w-full max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden">
-        
+
         {/* Left Column: Flow timeline (Step tracker) */}
         <div className="lg:col-span-2 card p-5 flex flex-col justify-between overflow-hidden border-surface-border/60">
           <div className="space-y-4 overflow-hidden flex flex-col flex-1">
@@ -223,8 +221,8 @@ export default function CinematicPresentationPage() {
                       isActive
                         ? "bg-surface border-primary shadow-md shadow-primary/5"
                         : isPassed
-                        ? "bg-success/5 border-success/15 opacity-60"
-                        : "bg-surface/30 border-surface-border/40 opacity-40 hover:opacity-75"
+                          ? "bg-success/5 border-success/15 opacity-60"
+                          : "bg-surface/30 border-surface-border/40 opacity-40 hover:opacity-75"
                     )}
                   >
                     <div className={cn(
@@ -232,8 +230,8 @@ export default function CinematicPresentationPage() {
                       isActive
                         ? "bg-primary border-primary text-white animate-pulse"
                         : isPassed
-                        ? "bg-success border-success text-white"
-                        : "bg-background-secondary border-surface-border text-text-muted"
+                          ? "bg-success border-success text-white"
+                          : "bg-background-secondary border-surface-border text-text-muted"
                     )}>
                       {isPassed ? "✓" : step.number}
                     </div>
@@ -291,7 +289,7 @@ export default function CinematicPresentationPage() {
 
         {/* Right Column: Live telemetry preview & deep links */}
         <div className="lg:col-span-1 flex flex-col gap-6 overflow-hidden">
-          
+
           {/* Telemetry counters */}
           <div className="card p-5 space-y-4 border-surface-border/60">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">

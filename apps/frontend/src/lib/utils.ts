@@ -13,16 +13,17 @@ export function cn(...inputs: ClassValue[]) {
 
 // --- Currency formatting ---
 
-export function formatRevenue(value: number, compact = false): string {
+export function formatRevenue(value: any, compact = false): string {
+  const val = typeof value === 'number' ? value : Number(value) || 0;
   if (compact) {
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}k`;
+    if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
+    if (val >= 1_000) return `$${(val / 1_000).toFixed(0)}k`;
   }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(val);
 }
 
 export function formatRevenueDaily(value: number): string {
@@ -120,16 +121,18 @@ export function getConfidenceColor(confidence: number): string {
   return '#2563EB';
 }
 
-export function formatConfidence(confidence: number): string {
-  return `${Math.round(confidence * 100)}%`;
+export function formatConfidence(confidence: any): string {
+  const conf = typeof confidence === 'number' ? confidence : Number(confidence) || 0;
+  return `${Math.round(conf * 100)}%`;
 }
 
 // --- Numbers ---
 
-export function formatNumber(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toString();
+export function formatNumber(n: any): string {
+  const num = typeof n === 'number' ? n : Number(n) || 0;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}k`;
+  return num.toString();
 }
 
 export function formatDuration(hours: number): string {
@@ -147,6 +150,7 @@ export function truncate(str: string, maxLen: number): string {
 
 // --- Commit hash display ---
 
-export function shortHash(hash: string): string {
+export function shortHash(hash: any): string {
+  if (!hash || typeof hash !== 'string') return '';
   return hash.slice(0, 7);
 }
