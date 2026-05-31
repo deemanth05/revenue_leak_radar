@@ -57,19 +57,27 @@ async def revenue_trend(db: AsyncSession = Depends(get_db)) -> list[TrendPoint]:
     """Return hourly revenue risk data points over the past 24 hours."""
     now = datetime.now(tz=timezone.utc)
     trend: list[TrendPoint] = []
+    twenty_four_hours_ago = now - timedelta(hours=24)
+
+    # Fetch all incidents from the last 24 hours in a single query
+    result = await db.execute(
+        select(Incident.started_at, Incident.estimated_revenue_impact_daily)
+        .where(Incident.started_at >= twenty_four_hours_ago)
+    )
+    incidents_24h = list(result.all())
 
     for hours_ago in range(23, -1, -1):
         bucket_start = now - timedelta(hours=hours_ago + 1)
         bucket_end = now - timedelta(hours=hours_ago)
 
-        result = await db.execute(
-            select(func.coalesce(func.sum(Incident.estimated_revenue_impact_daily), 0))
-            .where(
-                Incident.started_at >= bucket_start,
-                Incident.started_at < bucket_end,
-            )
-        )
-        trend.append(TrendPoint(timestamp=bucket_end, value=float(result.scalar_one() or 0)))
+        # Filter in memory
+        bucket_incidents = [
+            inc for inc in incidents_24h
+            if inc.started_at >= bucket_start and inc.started_at < bucket_end
+        ]
+
+        rev_val = sum(inc.estimated_revenue_impact_daily or 0 for inc in bucket_incidents)
+        trend.append(TrendPoint(timestamp=bucket_end, value=float(rev_val)))
 
     return trend
 

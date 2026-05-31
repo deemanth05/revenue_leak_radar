@@ -17,8 +17,11 @@ export default async function RevenueRiskPage() {
   let incidents: Incident[];
 
   try {
-    kpis = await incidentsApi.dashboardKpis();
-    const listRes = await incidentsApi.list();
+    const [kpisRes, listRes] = await Promise.all([
+      incidentsApi.dashboardKpis(),
+      incidentsApi.list(),
+    ]);
+    kpis = kpisRes;
     incidents = listRes.items;
   } catch (error) {
     console.warn('Backend API connection failed, using mock data. Error:', error);

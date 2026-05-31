@@ -122,34 +122,37 @@ async def get_dashboard_kpis(db: AsyncSession = Depends(get_db)) -> DashboardKpi
         row[0]: row[1] for row in sev_result.fetchall()
     }
 
-    # Revenue trend (last 24h hourly)
+    # Revenue trend (last 24h hourly) in-memory optimization
     now = datetime.now(tz=timezone.utc)
     revenue_trend: list[TrendPoint] = []
     incident_trend: list[TrendPoint] = []
+    twenty_four_hours_ago = now - timedelta(hours=24)
+
+    # Fetch all incidents from the last 24 hours in a single query
+    trend_result = await db.execute(
+        select(Incident.started_at, Incident.estimated_revenue_impact_daily)
+        .where(Incident.started_at >= twenty_four_hours_ago)
+    )
+    incidents_24h = list(trend_result.all())
 
     for hours_ago in range(23, -1, -1):
         bucket_start = now - timedelta(hours=hours_ago + 1)
         bucket_end = now - timedelta(hours=hours_ago)
 
-        rev_bucket = await db.execute(
-            select(func.coalesce(func.sum(Incident.estimated_revenue_impact_daily), 0))
-            .where(
-                Incident.started_at >= bucket_start,
-                Incident.started_at < bucket_end,
-            )
-        )
-        revenue_trend.append(
-            TrendPoint(timestamp=bucket_end, value=float(rev_bucket.scalar_one() or 0))
-        )
+        # Filter in memory
+        bucket_incidents = [
+            inc for inc in incidents_24h
+            if inc.started_at >= bucket_start and inc.started_at < bucket_end
+        ]
 
-        inc_bucket = await db.execute(
-            select(func.count(Incident.id)).where(
-                Incident.started_at >= bucket_start,
-                Incident.started_at < bucket_end,
-            )
+        rev_val = sum(inc.estimated_revenue_impact_daily or 0 for inc in bucket_incidents)
+        inc_val = len(bucket_incidents)
+
+        revenue_trend.append(
+            TrendPoint(timestamp=bucket_end, value=float(rev_val))
         )
         incident_trend.append(
-            TrendPoint(timestamp=bucket_end, value=float(inc_bucket.scalar_one() or 0))
+            TrendPoint(timestamp=bucket_end, value=float(inc_val))
         )
 
     return DashboardKpis(

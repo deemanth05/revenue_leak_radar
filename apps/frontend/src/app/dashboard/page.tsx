@@ -26,16 +26,17 @@ export default async function DashboardPage() {
   let isUsingMockData = false;
 
   try {
-    const listRes = await incidentsApi.list();
+    const [listRes, kpisRes, depRes] = await Promise.all([
+      incidentsApi.list(),
+      incidentsApi.dashboardKpis(),
+      deploymentsApi.list().catch((e) => {
+        console.warn('Failed to fetch deployments:', e);
+        return [];
+      }),
+    ]);
     incidents = listRes.items;
-    kpis = await incidentsApi.dashboardKpis();
-
-    try {
-      const depRes = await deploymentsApi.list();
-      deployments = Array.isArray(depRes) ? depRes : ((depRes as any).items || []);
-    } catch (e) {
-      console.warn('Failed to fetch deployments:', e);
-    }
+    kpis = kpisRes;
+    deployments = Array.isArray(depRes) ? depRes : ((depRes as any).items || []);
   } catch (error) {
     console.warn('Backend API connection failed, using mock data. Error:', error);
     incidents = getMockIncidents();

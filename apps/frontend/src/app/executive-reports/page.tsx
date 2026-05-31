@@ -15,8 +15,11 @@ export default async function ExecutiveReportsPage() {
   let activeIncidents: Incident[] = [];
 
   try {
-    report = await executiveApi.latest();
-    const incidentsRes = await incidentsApi.list({ page_size: 50 });
+    const [reportRes, incidentsRes] = await Promise.all([
+      executiveApi.latest(),
+      incidentsApi.list({ page_size: 50 }),
+    ]);
+    report = reportRes;
     activeIncidents = incidentsRes.items.filter(i => i.status !== 'resolved' && i.status !== 'closed');
   } catch (error) {
     console.warn('Backend API connection failed, using mock report. Error:', error);
