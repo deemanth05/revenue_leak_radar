@@ -5,6 +5,8 @@ import { formatRevenue } from '@/lib/utils';
 import type { Incident, DashboardKpis } from '@rlr/schemas';
 import { TrendingDown, TrendingUp, DollarSign, AlertTriangle, Users, Zap } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Revenue Risk — Revenue Leak Radar',
   description: 'Revenue impact analysis and financial risk assessment by incident',

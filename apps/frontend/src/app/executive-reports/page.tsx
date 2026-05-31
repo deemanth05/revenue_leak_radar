@@ -3,6 +3,8 @@ import { executiveApi, incidentsApi } from '@/lib/api';
 import { formatRevenue, formatRelativeTime } from '@/lib/utils';
 import type { ExecutiveSummary, Incident } from '@rlr/schemas';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Executive Reports — Revenue Leak Radar',
   description: 'AI-generated executive summaries and operational intelligence briefings',

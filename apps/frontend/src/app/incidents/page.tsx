@@ -4,6 +4,8 @@ import { incidentsApi, getMockIncidents } from '@/lib/api';
 import { getSeverityClass } from '@/lib/utils';
 import { IncidentSeverity, IncidentStatus, type Incident } from '@rlr/schemas';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Incidents — Revenue Leak Radar',
   description: 'All operational incidents ranked by business impact and revenue risk',

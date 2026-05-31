@@ -2,6 +2,8 @@ import { CheckCircle, AlertTriangle, XCircle, Activity } from 'lucide-react';
 import { healthApi } from '@/lib/api';
 import type { SystemHealth } from '@rlr/schemas';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'System Health — Revenue Leak Radar',
   description: 'Real-time service health monitoring across all integrated systems',

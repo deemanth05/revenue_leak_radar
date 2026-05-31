@@ -11,6 +11,8 @@ import { formatRevenue, formatNumber, formatDuration, formatRelativeTime, shortH
 import type { Incident, DashboardKpis, Deployment } from '@rlr/schemas';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Operations Dashboard — Revenue Leak Radar',
   description: 'Real-time revenue impact intelligence - sorted by business damage',
