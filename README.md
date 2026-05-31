@@ -202,6 +202,27 @@ Interactive docs: `http://localhost:8000/docs`
 
 ---
 
+## 🪸 The Coral Engine: Cross-Signal Correlation
+
+Coral is the central intelligence engine that powers the real-time operational correlation in Revenue Leak Radar. Instead of relying on expensive or non-deterministic LLMs to guess how events are related, Coral uses a highly optimized, fully deterministic relational query planner:
+
+### 1. Unified Namespace Queries
+Coral executes non-blocking asynchronous database joins across four distinct schema namespaces inside a specified temporal slide window:
+* **Deployments:** Active production releases on GitHub.
+* **Payment Failures:** Card declines and billing issues logged from Stripe webhooks.
+* **Support Tickets:** Helpdesk ticket surges indexed from Zendesk.
+* **Infrastructure Alerts:** Error spikes and timeouts tracked in Sentry.
+
+### 2. Time-Proximity Correlation Heuristic
+When a query is run, Coral groups events and calculates correlation confidence based on temporal proximity. For example:
+* A production deployment occurring within the **60-minute window preceding** an alert spike is flagged as the high-probability causal root.
+* The system weights active ticket counts and Stripe transaction failures to dynamically elevate or depress the incident's severity rank.
+
+### 3. API Contract & Frontend Integration
+The Next.js frontend accesses the Coral engine via the `/api/v1/coral/joint-query` endpoint, which returns execution latency metrics (typically **sub-15ms**) and detailed payload breakdowns. The UI maps this structured contract into interactive signal badges and node trees, offering an intuitive correlation console for SREs.
+
+---
+
 ## AI Providers
 
 The system auto-selects the best available provider:
